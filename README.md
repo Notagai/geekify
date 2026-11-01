@@ -1,67 +1,120 @@
 # geekify.
 
-A browser-first pixel-art now-playing experience, designed for vibe.notagai.com. Runs locally and deploys as a static website.
+Your Spotify controller, inside the VS Code terminal. Also includes a pixel-art website designed for vibe.notagai.com.
 
-## Quick start
+## Quick start: launch Geekify from anywhere
 
-Requires Node.js 20+. No package installation, account, or API keys for the demo.
+Requires Node.js 20 or newer.
 
-1. Clone the repository.
-2. From the project folder run:
+Open your VS Code terminal and run:
+
+    git clone https://github.com/Notagai/geekify.git
+    cd geekify
+    npm link
+
+After **npm link** (one-time setup), open **any** VS Code terminal, even in a different project, and type:
+
+    geekify
+
+This starts the interactive terminal interface. You do not need to run a web server or stay in this repository.
+
+To preview without Spotify credentials:
+
+    geekify demo
+
+To launch the browser experience instead:
 
     npm run dev
 
-3. Open **http://127.0.0.1:5173/** in your browser.
-4. Press **Start the demo**. The gear icon opens scene controls.
+Open http://127.0.0.1:5173/ .
 
-Other commands:
+## Connect Spotify to the terminal UI
 
-- **npm test** runs the built-in LRC parser tests.
-- **npm run build** creates a deployable static **dist/** folder.
+1. Sign in to https://developer.spotify.com/dashboard and use a Spotify developer app.
+2. In the app settings, register this **exact redirect URI**:
+   **http://127.0.0.1:8888/callback**
+3. In the terminal, run **geekify login**.
+4. Paste the app's **Client ID** (never the client secret).
+5. Authorize in the browser. Return to the terminal and run **geekify**.
+6. Open the normal Spotify application on your computer or another device and start a song.
 
-## Optional: Connect Spotify
+The CLI uses browser-based OAuth Authorization Code with PKCE. It refreshes the session automatically. Spotify Premium is required for development-mode apps and playback-control endpoints; developer apps have user limits. You do not need a paid AI API.
 
-1. Create an app at https://developer.spotify.com/dashboard.
-2. Add the *exact* redirect URI **http://127.0.0.1:5173/** in Spotify app settings.
-3. Open **Settings → Spotify Connection** and paste the app's **Client ID**. Click Connect Spotify.
-4. Authorize the playback-state permission. Play a song in your normal Spotify client.
-5. The website checks the active track approximately every five seconds, then gets time-coded lyrics from LRCLIB where available.
+**Important:** Geekify controls the existing Spotify player. Spotify does **not** stream its audio into this terminal. The terminal isn't a replacement audio player; it is a playback manager, song browser and lyrics display.
 
-No client secret is needed. Authorization Code + PKCE runs in the browser. Client IDs live in localStorage; Spotify tokens live only in sessionStorage. Never paste a client secret into this site.
+Spotify's developer API may restrict playlist contents when you don't own or collaborate on the playlist. Library, search and device availability are also subject to the app's granted scopes and current Spotify access rules.
 
-Spotify requires you to register the production redirect URI separately, for example **https://vibe.notagai.com/** (include the trailing slash). Spotify disallows the host name localhost for OAuth redirect URIs, so the local server uses 127.0.0.1 instead.
+## Keyboard controls
 
-Spotify developer mode may require the account owner to have Premium and limit eligible users.
+| Key | Action |
+| --- | --- |
+| 1 | Now Playing and live lyrics |
+| 2 | Search results |
+| 3 | Liked tracks |
+| 4 | Playlists |
+| 5 | Spotify Connect devices |
+| / | Type and run a search |
+| Up / Down, j / k | Navigate songs or manually scroll unsynced lyrics |
+| Enter | Play selected track / open playlist / switch device |
+| PgUp / PgDn | Change catalog page |
+| Space | Play or pause |
+| n / p | Next / previous track |
+| + / - | Change volume |
+| s / r | Toggle shuffle / cycle repeat |
+| f | Save the current track to Liked Songs |
+| c | Connect or reconnect Spotify |
+| : | Enter a Geekify command |
+| Esc | Go back |
+| ? | Help |
+| q | Quit |
 
-## Features
+Commands inside the interactive UI: **:connect**, **:logout**, **:demo**, **:search text**, **:refresh**, **:help**, **:quit**.
 
-- Three original procedurally rendered 640×360 pixel-art scenes (neon city, twilight mountains, orbiting planet).
-- Nearest-neighbor scaling to full-screen 1440p and 4K, with lyrics rendered as sharp native text.
-- Browser-based Spotify PKCE sign-in and now-playing track/progress display.
-- Browser-based LRCLIB lyric lookup and LRC timestamp parsing.
-- Original demo lyrics and fake playback timeline, with no third-party copyrighted lyrics bundled.
-- Fullscreen, responsive layout, theme selector, motion intensity, reduced-motion option.
-- No server APIs, cloud storage, paid AI tokens or npm packages.
+CLI entry points: **geekify**, **geekify demo**, **geekify login**, **geekify logout**, **geekify web**, **geekify --help**, **geekify --version**.
 
-## Limitations and licensing
+## Lyrics: how the fix works
 
-The demo is **silent** and does not play music. Spotify audio still comes from your Spotify app. Spotify's Web API exposes playback metadata, not raw audio-frequency data. Scene motion is atmospheric and is **not beat-accurate**. True audio-reactive visuals would need a separate, permission-based audio input.
+Lyrics come from https://lrclib.net/docs without an API key. The old implementation made one strict lookup with Spotify title, album and duration and returned "no lyrics" for many songs with different single/remaster metadata.
 
-Spotify developer rules restrict synchronizing Spotify sound recordings with visual media. Review its developer policy and obtain permissions as appropriate before a publicly distributed synchronized visualization product: https://developer.spotify.com/policy
+The revised lookup:
+1. Attempts an exact song + artist + album + duration match.
+2. Falls back to searching lyrics by title + artist without overconstraining album/duration.
+3. Rejects results with the wrong artist/title or a significantly different duration.
+4. Prefers synchronized, timestamped LRC.
+5. Shows plain lyrics when only unsynced text is available, clearly labeled as **unsynced**.
+6. Does not pretend lyrics exist if the provider has none.
 
-Synchronized lyrics are retrieved from https://lrclib.net/docs when available and are not stored in this repository. Some songs have no timed lyrics, instrumental tracks are unsupported by design, and rate limits or API errors can occur. The interface falls back to showing the song title.
+The lyrics' current line is derived from Spotify's approximate playback position. Spotify polling and network latency can still lead to some drift. The app cannot guarantee lyrics for all songs. No copyrighted lyrics are committed to this repository; the original demo includes fictional lines only.
 
-## Deploy
+## Browser app
 
-Run **npm run build** and configure a static hosting provider (Vercel, Cloudflare Pages, or similar):
+    npm run dev
+    npm test
+    npm run build
 
-- Build command: npm run build
-- Output directory: dist
-- Framework: Other / none
-- Domain: vibe.notagai.com (DNS and host configuration required)
+The website runs at http://127.0.0.1:5173/ . For **web** Spotify login, register a separate redirect URI **http://127.0.0.1:5173/**. The browser has a different OAuth session from the terminal. Use the gear icon to configure Spotify on the website. For hosting on vibe.notagai.com, run **npm run build** and deploy the **dist/** folder as a static website, then register **https://vibe.notagai.com/** as another Spotify redirect URI. Nothing is deployed automatically by this repository.
 
-This repo does not deploy anything automatically. To use Spotify on your deployed domain, register the deployment's exact HTTPS redirect URI in the Spotify Dashboard.
+The website renders three original Canvas pixel scenes at 640x360, nearest-neighbor scaled to 1440p / 4K. It is currently atmospheric, not audio-frequency driven. True beat-accurate visualization requires a separate permission-based audio source. Spotify's platform policy also limits synchronizing Spotify sound recordings with visual media, so review https://developer.spotify.com/policy before publicly distributing such an integration.
 
-## Notes
+## Developer notes
 
-No external wallpaper images are downloaded. Pixel art is rendered directly by Canvas. Spotify and LRCLIB remain independent third-party services with their own terms.
+The repo has **no third-party npm dependencies**. The CLI uses built-in Node.js APIs and ANSI terminal controls. It works in interactive PowerShell, Windows Terminal, and VS Code integrated terminals.
+
+- Spotify client ID and refreshed access tokens are written to your user profile's **~/.geekify/config.json**, best-effort user-only filesystem permissions; the file is **not encrypted**.
+- Run **geekify logout** to clear the token from that file.
+- Use **npm unlink -g geekify** to remove the globally linked command.
+- The CLI's OAuth redirect uses **http://127.0.0.1:8888/callback** because Spotify permits HTTP only for loopback IP literals; \`localhost\` is not a permitted OAuth redirect.
+- The terminal UI uses 6-second polling for playback state, respecting rate-limit headers where possible.
+- The UI doesn't persist or upload music files. All audio comes from the existing Spotify player.
+
+## Limits
+
+Search, library and Spotify Connect depend on the Spotify Web API, a Premium developer account and the user's available playback devices. Remote commands may fail if playback is unavailable or a Spotify endpoint is restricted. Spotify retains control of audio playback and track availability.
+
+Testing:
+
+    npm test
+    npm run cli:smoke
+    npm run build
+
+GitHub Actions checks those commands on main and pull requests.

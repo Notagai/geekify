@@ -1,13 +1,20 @@
 {
   "name": "geekify",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "A browser-first, pixel-art now-playing experience.",
+  "description": "Pixel-art web music experience and Spotify terminal UI.",
+  "bin": {
+    "geekify": "./bin/geekify.mjs"
+  },
   "scripts": {
     "dev": "node scripts/dev.mjs",
+    "tui": "node bin/geekify.mjs",
+    "cli:smoke": "node bin/geekify.mjs --help && node bin/geekify.mjs --version",
     "build": "node scripts/build.mjs",
     "test": "node --test"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }

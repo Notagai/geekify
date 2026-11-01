@@ -1,5 +1,5 @@
 import { PixelScene } from './scene.js';
-import { fetchLyrics, lyricIndex } from './lyrics.js';
+import { lookupLyrics, lyricIndex } from './lyrics.js';
 import { redirectUri, getClientId, beginSpotifyLogin, completeSpotifyLogin, disconnectSpotify, getSpotifyPlayback, hasSpotifySession } from './spotify.js';
 
 const $ = (id) => document.getElementById(id);
@@ -33,7 +33,7 @@ const state = {
   intensity:Number(stored('geekify.intensity','65'))/100, reduced:stored('geekify.reduced','false')==='true',
   showLyrics:stored('geekify.lyrics','true')==='true',
   demoPlaying:false, demoOffset:0, demoAnchor:performance.now(),
-  spotifyTrack:null, spotifyAnchor:0, spotifyProgress:0, spotifyLyrics:null, lyricsLoading:false,
+  spotifyTrack:null, spotifyAnchor:0, spotifyProgress:0, spotifyLyrics:null, spotifyPlainLyrics:[], lyricsLoading:false,
   spotifyPoll:null, pollDelay:5000, lyricAbort:null, lastLine:'', lastUiUpdate:0, toastTimeout:null, requestInFlight:false
 };
 const scene = new PixelScene(DOM.world);
@@ -84,7 +84,7 @@ function toggleDemo() {
   renderPlayerInfo();
 }
 function setDemoMode() {
-  state.mode='demo';state.spotifyTrack=null;state.spotifyLyrics=null;state.lastLine='';
+  state.mode='demo';state.spotifyTrack=null;state.spotifyLyrics=null;state.spotifyPlainLyrics=[];state.lastLine='';
   clearTimeout(state.spotifyPoll);state.spotifyPoll=null;
   if(state.lyricAbort)state.lyricAbort.abort();
   disconnectSpotify();
@@ -153,8 +153,13 @@ function renderLyrics() {
     DOM.note.textContent='Looking for synchronized lyrics…';
     writeLine(track.artist,'finding the words…',track.title);return;
   }
+  if(state.mode==='spotify'&&!lines?.length&&state.spotifyPlainLyrics.length){
+    DOM.note.textContent='Unsynced lyrics found. This version has no timing information.';
+    writeLine(state.spotifyPlainLyrics[0]||'',state.spotifyPlainLyrics[1]||state.spotifyPlainLyrics[0]||'',state.spotifyPlainLyrics[2]||'');
+    return;
+  }
   if(!lines?.length) {
-    DOM.note.textContent=state.mode==='spotify'?'No synced lyrics found for this track. Enjoy the view.':'';
+    DOM.note.textContent=state.mode==='spotify'?'No matching lyrics found. Try another song/version.':'';
     writeLine('you are listening to',track.title,track.artist);return;
   }
   DOM.note.textContent=state.mode==='demo'?'An original sample sequence for previewing the experience.':'Lyrics provided by LRCLIB when available.';
@@ -167,10 +172,13 @@ async function lyricsForTrack(track){
   if(state.lyricAbort)state.lyricAbort.abort();
   const controller=new AbortController();
   state.lyricAbort=controller;
-  state.spotifyLyrics=null;state.lyricsLoading=true;state.lastLine='';
+  state.spotifyLyrics=null;state.spotifyPlainLyrics=[];state.lyricsLoading=true;state.lastLine='';
   try {
-    const lines=await fetchLyrics(track,controller.signal);
-    if(!controller.signal.aborted&&state.spotifyTrack?.id===track.id)state.spotifyLyrics=lines;
+    const result=await lookupLyrics(track,controller.signal);
+    if(!controller.signal.aborted&&state.spotifyTrack?.id===track.id){
+      state.spotifyLyrics=result.lines.length?result.lines:null;
+      state.spotifyPlainLyrics=result.status==='plain'?result.plain:[];
+    }
   } catch(error) {
     if(error.name!=='AbortError') notify('Lyrics lookup unavailable. The visualizer still works.');
   } finally {
@@ -195,7 +203,7 @@ async function pollSpotify(){
     state.spotifyProgress=track?.progressMs||0;
     if(track?.id!==oldId) {
       if(state.lyricAbort)state.lyricAbort.abort();
-      state.spotifyLyrics=null;state.lyricsLoading=false;state.lastLine='';
+      state.spotifyLyrics=null;state.spotifyPlainLyrics=[];state.lyricsLoading=false;state.lastLine='';
       if(track)void lyricsForTrack(track);
     }
     renderPlayerInfo();
@@ -216,7 +224,7 @@ async function connectSpotify(){
   catch(error){notify(error.message||'Could not open Spotify sign-in.');DOM.connect.disabled=false;}
 }
 function enterSpotifyMode(){
-  state.mode='spotify';state.spotifyTrack=null;state.spotifyLyrics=null;state.lyricsLoading=false;state.lastLine='';
+  state.mode='spotify';state.spotifyTrack=null;state.spotifyLyrics=null;state.spotifyPlainLyrics=[];state.lyricsLoading=false;state.lastLine='';
   DOM.demoCta.hidden=true;
   renderPlayerInfo();
   queuePoll(0);

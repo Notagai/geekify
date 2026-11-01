@@ -1,4 +1,4 @@
-name: Verify geekify
+name: Verify Geekify
 on:
   push:
     branches: [main]
@@ -13,4 +13,8 @@ jobs:
         with:
           node-version: 22
       - run: npm test
+      - run: npm run cli:smoke
+      - run: node --check cli/ui.mjs
+      - run: node --check cli/auth.mjs
+      - run: node --check cli/spotify.mjs
       - run: npm run build
