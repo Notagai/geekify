@@ -162,6 +162,12 @@ export class GeekifyTui {
     const base=this.playback.progress_ms||0;
     return Math.min(this.current?.durationMs||Infinity,base+(this.playing?performance.now()-this.progressAnchor:0));
   }
+  targetDeviceId(){
+    const device=this.playback?.device;
+    if(!device)throw new Error('No active Spotify device. Start playback in Spotify Desktop or use tab 5.');
+    if(device.is_restricted)throw new Error('This Spotify device restricts remote controls. Try Spotify Desktop.');
+    return device.id||undefined;
+  }
   async action(task,success){
     try{await task();if(success)this.alert(success,2);if(!this.demo)void this.refreshPlayback();}
     catch(error){this.alert(error.message||'Action failed.');}
@@ -209,11 +215,11 @@ export class GeekifyTui {
       this.playlist=item;this.offset=0;this.selected=0;await this.loadList();return;
     }
     if(item.type==='device'){
-      await this.action(()=>this.api.transfer(item.id),'Playback transferred to '+item.name);
+      await this.action(()=>item.is_restricted?Promise.reject(new Error('This device restricts remote controls. Try Spotify Desktop.')):this.api.transfer(item.id),'Playback transferred to '+item.name);
       await this.loadList();return;
     }
     const track=trackInfo(item);
-    if(track?.uri)await this.action(()=>this.api.playUri(track.uri),'Playing '+track.title+' on your Spotify device');
+    if(track?.uri)await this.action(()=>this.api.playUri(track.uri,this.targetDeviceId()),'Playing '+track.title+' on your Spotify device');
   }
   async handleInput(chunk){
     const input=chunk.toString('utf8');
@@ -250,15 +256,15 @@ export class GeekifyTui {
     if(input==='q'){this.quit();return;}
     if(input==='\r'||input==='\n'){await this.enterItem();return;}
     if(input===' '){await this.togglePlayback();return;}
-    if(input==='n'){await this.action(()=>this.demo?this.demoSkip():this.api.next());return;}
-    if(input==='p'){await this.action(()=>this.demo?this.demoSkip():this.api.previous());return;}
+    if(input==='n'){await this.action(()=>this.demo?this.demoSkip():this.api.next(this.targetDeviceId()));return;}
+    if(input==='p'){await this.action(()=>this.demo?this.demoSkip():this.api.previous(this.targetDeviceId()));return;}
     if(input==='+'||input==='='){await this.volume(5);return;}
     if(input==='-'){await this.volume(-5);return;}
-    if(input==='s'&&!this.demo){await this.action(()=>this.api.shuffle(!this.playback?.shuffle_state),'Shuffle toggled');return;}
+    if(input==='s'&&!this.demo){await this.action(()=>this.api.shuffle(!this.playback?.shuffle_state,this.targetDeviceId()),'Shuffle toggled');return;}
     if(input==='r'&&!this.demo){
       const modes=['off','context','track'];
       const next=modes[(modes.indexOf(this.playback?.repeat_state)+1)%modes.length];
-      await this.action(()=>this.api.repeat(next),'Repeat: '+next);return;
+      await this.action(()=>this.api.repeat(next,this.targetDeviceId()),'Repeat: '+next);return;
     }
     if(input==='f'&&!this.demo&&this.current?.uri){await this.action(()=>this.api.save(this.current.uri),'Saved to your library');return;}
   }
@@ -279,14 +285,14 @@ export class GeekifyTui {
       else this.demoStarted=performance.now();
       this.playing=!this.playing;this.draw();return;
     }
-    await this.action(()=>this.api.playPause(this.playing));
+    await this.action(()=>this.api.playPause(this.playing,this.targetDeviceId()));
   }
   async demoSkip(){this.demoOffset=0;this.demoStarted=performance.now();this.playing=true;}
   async volume(delta){
     if(this.demo)return this.alert('Volume changes require a Spotify device.');
     const volume=this.playback?.device?.volume_percent;
     if(typeof volume!=='number')return this.alert('Active device has no adjustable volume.');
-    await this.action(()=>this.api.volume(volume+delta));
+    await this.action(()=>this.api.volume(volume+delta,this.targetDeviceId()));
   }
   move(delta){
     if(this.tab==='now'&&this.lyrics.status==='plain'){

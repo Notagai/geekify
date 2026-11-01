@@ -70,7 +70,21 @@ Spotify's developer API may restrict playlist contents when you don't own or col
 
 Commands inside the interactive UI: **:connect**, **:logout**, **:demo**, **:search text**, **:refresh**, **:help**, **:quit**.
 
-CLI entry points: **geekify**, **geekify demo**, **geekify login**, **geekify logout**, **geekify web**, **geekify --help**, **geekify --version**.
+CLI entry points: **geekify**, **geekify demo**, **geekify login**, **geekify logout**, **geekify doctor**, **geekify web**, **geekify --help**, **geekify --version**.
+
+## Playback controls troubleshooting
+
+If Geekify can display the current track but cannot play, pause, skip, or start a song, use:
+
+    git pull
+    geekify login
+    geekify doctor
+
+**geekify doctor** is read-only. It checks whether Spotify granted `user-modify-playback-state`, whether the player API responds, whether a playback device is active, and whether the device is marked `is_restricted`. It never prints access or refresh tokens. Older sessions may not store their granted scopes; login again to populate them.
+
+Before testing: open Spotify Desktop, start playing a song, and confirm Spotify Desktop is the active output device. Then run `geekify` and press Space to pause. If Spotify rejects the command, Geekify now reports the HTTP status, endpoint and Spotify-provided reason such as `PREMIUM_REQUIRED` or `RESTRICTION_VIOLATED` instead of a generic "denied" message.
+
+A Spotify 403 is **not automatically proof you lack Premium**. Confirm that the account you authorized is on the app's Users Management allowlist, and that the Spotify app owner has Premium. The development limit is **five distinct authorized Spotify accounts**, not five devices or five simultaneous sessions.
 
 ## Lyrics: how the fix works
 

@@ -51,6 +51,7 @@ function persistToken(result,clientId){
   config.token={
     access_token:result.access_token,
     refresh_token:result.refresh_token||config.token?.refresh_token,
+    scope:result.scope ?? config.token?.scope ?? null,
     expires_at:Date.now()+Math.max(20,Number(result.expires_in||3600)-60)*1000
   };
   saveConfig(config);

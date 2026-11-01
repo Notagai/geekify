@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { stdin, stdout } from 'node:process';
 import { GeekifyTui } from '../cli/ui.mjs';
+import { runDoctor } from '../cli/doctor.mjs';
 import { loadConfig, login, logout, redirectUri } from '../cli/auth.mjs';
 
 const help=`geekify.  /  your music, in the terminal
@@ -12,6 +13,7 @@ Usage:
   geekify               Launch the interactive Spotify-style interface
   geekify demo          Launch a no-account demo
   geekify login         Connect a Spotify account using OAuth PKCE
+  geekify doctor        Check scopes and Spotify Connect devices (read-only)
   geekify logout        Clear the stored Spotify session
   geekify web           Start the browser app (same as npm run dev)
   geekify --help        Show this help
@@ -39,6 +41,7 @@ async function main(){
   if(['--help','-h','help'].includes(command)){console.log(help);return;}
   if(['--version','-v'].includes(command)){console.log('geekify 0.2.0');return;}
   if(command==='logout'){logout();console.log('Spotify session cleared.');return;}
+  if(command==='doctor'){process.exitCode=await runDoctor();return;}
   if(command==='login'){
     if(!stdin.isTTY)throw new Error('geekify login needs an interactive terminal.');
     const config=loadConfig();
