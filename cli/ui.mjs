@@ -304,49 +304,52 @@ export class GeekifyTui {
   put(lines,text,color='base'){
     lines.push({text,color});
   }
-  renderNow(lines,inner){
+  renderNow(lines,inner,height){
+    const compact=height<24;
     const track=this.current;
-    this.put(lines,'','base');
-    this.put(lines,'  NOW PLAYING                                           '+(this.demo?'DEMO TRANSMISSION':'SPOTIFY CONNECT'),'mint');
-    this.put(lines,'','base');
+    if(!compact)this.put(lines,'','base');
+    this.put(lines,'  NOW PLAYING'+(this.demo?'  /  DEMO':'  /  SPOTIFY'),'mint');
+    if(!compact)this.put(lines,'','base');
     if(!track){
-      this.put(lines,'  Nothing is playing on Spotify right now.','bright');
-      this.put(lines,'  Open Spotify and start playback on a connected device.','muted');
+      this.put(lines,'  Nothing playing. Open Spotify on an active device.','bright');
+      this.put(lines,'  Press c to connect or 5 to see available devices.','muted');
       return;
     }
     this.put(lines,'  '+trim(track.title,inner-4),'bright');
     this.put(lines,'  '+trim(track.artist,inner-4),'muted');
-    this.put(lines,'  '+trim(track.album||'',inner-4),'muted');
-    this.put(lines,'','base');
-    const now=this.playbackPosition();const duration=track.durationMs||0;
-    const barSize=Math.max(8,Math.min(44,inner-25));const filled=Math.round(barSize*(duration?now/duration:0));
-    this.put(lines,'  '+clock(now)+'   '+ '━'.repeat(filled)+'─'.repeat(barSize-filled)+'   '+clock(duration),'pink');
-    this.put(lines,'  SPACE play/pause  ·  n next  ·  p previous  ·  +/- volume  ·  f save','muted');
-    this.put(lines,'','base');
-    this.put(lines,'  ───────────────  L Y R I C S  ───────────────','violet');
-    this.put(lines,'','base');
+    if(!compact){this.put(lines,'  '+trim(track.album||'',inner-4),'muted');this.put(lines,'','base');}
+    const now=this.playbackPosition(),duration=track.durationMs||0;
+    const barSize=Math.max(8,Math.min(36,inner-25));
+    const filled=Math.max(0,Math.min(barSize,Math.round(barSize*(duration?now/duration:0))));
+    this.put(lines,'  '+clock(now)+'   '+'━'.repeat(filled)+'─'.repeat(barSize-filled)+'   '+clock(duration),'pink');
+    if(!compact){this.put(lines,'  SPACE play/pause  ·  n next  ·  p previous  ·  +/- volume  ·  f save','muted');this.put(lines,'','base');}
+    this.put(lines,'  ─────  L Y R I C S  ─────','violet');
+    if(!compact)this.put(lines,'','base');
     if(this.demo){
-      this.renderSynced(lines,DEMO_LYRICS,now);
-      this.put(lines,'  Original demo lines; no audio stream.','muted');
+      this.renderSynced(lines,DEMO_LYRICS,now,!compact);
+      if(!compact)this.put(lines,'  Original demo lyrics; no audio stream.','muted');
     }else if(this.lyricPending){
       this.put(lines,'  Looking for lyrics on LRCLIB…','warning');
     }else if(this.lyrics.status==='synced'){
-      this.renderSynced(lines,this.lyrics.lines,now);
-      this.put(lines,'  Synced by track position  ·  LRCLIB','muted');
+      this.renderSynced(lines,this.lyrics.lines,now,!compact);
+      if(!compact)this.put(lines,'  Synced by track position  ·  LRCLIB','muted');
     }else if(this.lyrics.status==='plain'){
       const plain=this.lyrics.plain;
-      for(const row of plain.slice(this.plainOffset,this.plainOffset+5))this.put(lines,'  '+trim(row,inner-4),'bright');
-      this.put(lines,'','base');this.put(lines,'  Unsynced lyrics (j/k to scroll)  ·  LRCLIB','warning');
+      const count=compact?2:5;
+      for(const row of plain.slice(this.plainOffset,this.plainOffset+count))this.put(lines,'  '+trim(row,inner-4),'bright');
+      if(!compact){this.put(lines,'','base');this.put(lines,'  Unsynced lyrics (j/k to scroll)  ·  LRCLIB','warning');}
     }else{
       this.put(lines,'  '+(this.lyrics.status==='error'?'Lyrics provider unavailable.':'No matching lyrics available for this song.'),'warning');
-      this.put(lines,'  The track may be instrumental or have an unmatched release.','muted');
+      if(!compact)this.put(lines,'  The track may be instrumental or an unmatched release.','muted');
     }
-    this.put(lines,'','base');
-    const device=this.playback?.device;
-    if(!this.demo&&device)this.put(lines,'  OUTPUT  '+device.name+'   |   VOL '+String(device.volume_percent??'--')+'%   |   '+(this.playback?.shuffle_state?'SHUFFLE ON':'SHUFFLE OFF'),'muted');
-    if(this.demo)this.put(lines,'  DEMO MODE  |  Press c to connect to Spotify','muted');
+    if(!compact){
+      this.put(lines,'','base');
+      const device=this.playback?.device;
+      if(!this.demo&&device)this.put(lines,'  OUTPUT  '+device.name+'   |   VOL '+String(device.volume_percent??'--')+'%   |   '+(this.playback?.shuffle_state?'SHUFFLE ON':'SHUFFLE OFF'),'muted');
+      if(this.demo)this.put(lines,'  DEMO MODE  |  Press c to connect to Spotify','muted');
+    }
   }
-  renderSynced(lines,arr,position){
+  renderSynced(lines,arr,position,spacious=true){
     const index=lyricIndex(arr,position);
     const at=Math.max(0,index);
     const prev=arr[at-1]?.text||'';
@@ -355,7 +358,7 @@ export class GeekifyTui {
     this.put(lines,'  '+trim(prev,100),'muted');
     this.put(lines,'  › '+trim(current,100),'bright');
     this.put(lines,'  '+trim(next,100),'muted');
-    this.put(lines,'','base');
+    if(spacious)this.put(lines,'','base');
   }
   renderList(lines,inner,height){
     const titles={search:'SEARCH  /  '+(this.searchQuery||'Enter a query with /'),
@@ -414,10 +417,12 @@ export class GeekifyTui {
     this.put(lines,'  '+labels,'bright');
     this.put(lines,'  '+(this.demo?'● DEMO MODE':'● SPOTIFY CONNECTED')+'    '+(this.playing?'▶ PLAYING':'Ⅱ PAUSED')+'     '+(this.busy?'SYNCING…':'READY'),'mint');
     if(this.help)this.renderHelp(lines);
-    else if(this.tab==='now')this.renderNow(lines,inner);
+    else if(this.tab==='now')this.renderNow(lines,inner,h);
     else this.renderList(lines,inner,h);
     const status=(this.message&&Date.now()<this.messageUntil)?this.message:'Press ? for help  ·  / search  ·  c connect  ·  q quit';
-    const remaining=Math.max(0,h-lines.length-4);
+    // Reserve the status and command prompt even in a small VS Code terminal.
+    if(lines.length>h-3)lines.length=h-3;
+    const remaining=Math.max(0,h-lines.length-3);
     for(let i=0;i<remaining;i++)this.put(lines,'','base');
     this.put(lines,'├'+'─'.repeat(inner)+'┤','violet');
     this.put(lines,this.prompt?(this.prompt.mode==='search'?'  SEARCH > ':'  COMMAND :')+this.prompt.text+'_':'  '+trim(status,inner-4),this.prompt?'pink':'warning');
