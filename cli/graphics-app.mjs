@@ -34,12 +34,36 @@ export function terminalSceneLayout(columns,rows){
   const top=Math.floor((height-contentHeight)/2);
   return {width,height,contentWidth,contentHeight,left,top};
 }
+// Keep a small buffer between the illustrated frame and VS Code's terminal viewport.
+// Drawing into the last character row/column can clip the image at pane boundaries.
+export const SAFE_MARGIN_COLS=2, SAFE_MARGIN_ROWS=1;
+export function terminalPlacement(columns,rows){
+  const availableCols=Math.max(1,Math.trunc(Number(columns)||100));
+  const availableRows=Math.max(1,Math.trunc(Number(rows)||32));
+  const marginCols=Math.min(SAFE_MARGIN_COLS,Math.floor((availableCols-1)/2));
+  const marginRows=Math.min(SAFE_MARGIN_ROWS,Math.floor((availableRows-1)/2));
+  return {
+    anchorCol:marginCols+1,anchorRow:marginRows+1,
+    columns:availableCols-2*marginCols,rows:availableRows-2*marginRows
+  };
+}
+// Convert terminal cell coordinates back to 1200×675 illustrated hit-test units.
+export function terminalMouseToScene(col,row,placement,layout){
+  const localCol=col-placement.anchorCol+1,localRow=row-placement.anchorRow+1;
+  if(localCol<1||localCol>placement.columns||localRow<1||localRow>placement.rows)return null;
+  const px=(localCol-.5)/placement.columns*layout.width;
+  const py=(localRow-.5)/placement.rows*layout.height;
+  return {
+    x:(px-layout.left)/layout.contentWidth*WIDTH,
+    y:(py-layout.top)/layout.contentHeight*HEIGHT
+  };
+}
 export class GeekifyGraphicsApp {
   constructor({demo=false,forceImages=false}={}){
     this.demo=demo||!isConnected();
     this.forceImages=forceImages;
     this.protocol='ansi';this.lastImageId=0;this.frameSequence=0;
-    this.imageLayout=null;
+    this.imageLayout=null;this.imagePlacement=null;
     this.api=new SpotifyApi();
     this.track=this.demo?DEMO_TRACK:null;
     this.playing=this.demo;
@@ -343,15 +367,16 @@ export class GeekifyGraphicsApp {
     this.drawing=true;
     try{
       const state=this.renderState();
-      const cols=Math.max(48,stdout.columns||100),rows=Math.max(16,stdout.rows||32);
+      const cols=Math.max(1,stdout.columns||100),rows=Math.max(1,stdout.rows||32);
+      const placement=terminalPlacement(cols,rows);
       // Re-encoding the same large image every 650ms is unnecessary, especially paused.
       const frameKey=JSON.stringify({...state,progressMs:Math.floor(state.progressMs/1000),
         coverDataUrl:this.coverDataUrl.length,columns:cols,rows});
       if(frameKey===this.lastFrameKey)return;
       const svg=sceneSvg(state,this.assets);
-      // Letterbox the 16:9 illustrated UI inside arbitrary terminal panes.
-      const layout=terminalSceneLayout(cols,rows);
-      this.imageLayout=layout;
+      // Letterbox the 16:9 illustration within the safe, inset terminal region.
+      const layout=terminalSceneLayout(placement.columns,placement.rows);
+      this.imageLayout=layout;this.imagePlacement=placement;
       const png=await sharp(Buffer.from(svg),{limitInputPixels:2500000})
         .resize(layout.contentWidth,layout.contentHeight,{fit:'fill',kernel:'nearest'})
         .extend({
@@ -364,12 +389,15 @@ export class GeekifyGraphicsApp {
       if(!this.running)return;
       if(this.protocol==='kitty'){
         const imageId=938201+(this.frameSequence++%2);
-        const encoded=encodeKittyImage(png,{columns:cols,rows,imageId});
+        const encoded=encodeKittyImage(png,{
+          columns:placement.columns,rows:placement.rows,imageId
+        });
         const cleanup=this.lastImageId?kittyDeleteImage(this.lastImageId):'';
         this.lastImageId=imageId;
-        stdout.write(ESC+'H'+encoded+cleanup);
+        stdout.write(ESC+placement.anchorRow+';'+placement.anchorCol+'H'+encoded+cleanup);
       }else{
-        stdout.write(ESC+'H'+encodeInlineImage(png,cols,rows));
+        stdout.write(ESC+placement.anchorRow+';'+placement.anchorCol+'H'+
+          encodeInlineImage(png,placement.columns,placement.rows));
       }
       this.lastFrameKey=frameKey;
     }catch(error){
@@ -383,11 +411,9 @@ export class GeekifyGraphicsApp {
   }
   async mouse(code,col,row,release){
     if(release)return;
-    const layout=this.imageLayout||terminalSceneLayout(stdout.columns||100,stdout.rows||32);
-    const px=(col-.5)/(stdout.columns||100)*layout.width;
-    const py=(row-.5)/(stdout.rows||32)*layout.height;
-    const x=(px-layout.left)/layout.contentWidth*WIDTH;
-    const y=(py-layout.top)/layout.contentHeight*HEIGHT;
+    const placement=this.imagePlacement||terminalPlacement(stdout.columns||100,stdout.rows||32);
+    const layout=this.imageLayout||terminalSceneLayout(placement.columns,placement.rows);
+    const point=terminalMouseToScene(col,row,placement,layout);
     if((code&32)===32)return; // Mouse movement is not a click.
     if((code&64)===64){
       if(this.tab!=='now'&&this.list.length){
@@ -396,8 +422,8 @@ export class GeekifyGraphicsApp {
       }
       return;
     }
-    if((code&3)!==0)return; // left mouse press
-    const hit=hitTest(x,y,this.tab);
+    if((code&3)!==0||!point)return; // left mouse press inside the inset image
+    const hit=hitTest(point.x,point.y,this.tab);
     if(!hit)return;
     if(hit.type==='tab'){await this.changeTab(hit.value);return;}
     if(hit.type==='play'){await this.togglePlayback();return;}

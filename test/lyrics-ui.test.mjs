@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import sharp from 'sharp';
-import { GeekifyGraphicsApp, terminalSceneLayout } from '../cli/graphics-app.mjs';
+import { GeekifyGraphicsApp, terminalSceneLayout, terminalPlacement, terminalMouseToScene } from '../cli/graphics-app.mjs';
 import { sceneSvg,hitTest,WIDTH,HEIGHT,TABS } from '../cli/lyrics-scene.mjs';
 
 test('Music desk renders original Geekify pixel-art skins, no mascot',async()=>{
@@ -54,4 +54,28 @@ test('16:9 art preserves proportions even in very tall terminal panes',()=>{
   assert.ok(layout.top>0);
   assert.equal(layout.left,0);
   assert.ok(Math.abs(layout.contentWidth/layout.contentHeight-16/9)<0.012);
+});
+
+test('Graphical UI stays inset from the terminal edges',()=>{
+  const placement=terminalPlacement(120,45);
+  assert.deepEqual(placement,{anchorCol:3,anchorRow:2,columns:116,rows:43});
+  assert.ok(placement.anchorCol+placement.columns-1<120);
+  assert.ok(placement.anchorRow+placement.rows-1<45);
+  const tiny=terminalPlacement(4,3);
+  assert.ok(tiny.columns>=1&&tiny.rows>=1);
+});
+
+test('Mouse mapping matches the inset graphical placement',()=>{
+  const placement=terminalPlacement(120,45);
+  const layout=terminalSceneLayout(placement.columns,placement.rows);
+  assert.equal(terminalMouseToScene(1,1,placement,layout),null);
+  assert.equal(terminalMouseToScene(120,45,placement,layout),null);
+  const scenePoint={x:880,y:582};
+  const col=placement.anchorCol+Math.floor(
+    (layout.left+scenePoint.x/WIDTH*layout.contentWidth)/layout.width*placement.columns);
+  const row=placement.anchorRow+Math.floor(
+    (layout.top+scenePoint.y/HEIGHT*layout.contentHeight)/layout.height*placement.rows);
+  const mapped=terminalMouseToScene(col,row,placement,layout);
+  assert.ok(mapped);
+  assert.deepEqual(hitTest(mapped.x,mapped.y),{type:'play'});
 });
