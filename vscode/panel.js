@@ -178,7 +178,7 @@ function redraw(){
   const song=state.track||{};
   title.textContent=truncate(song.title||'Nothing playing',25);
   artist.textContent=truncate(song.artist||'Search Spotify to begin',29);
-  cover.src=song.imageUrl&&/^https:\/\/[a-z0-9.-]+\.spotify(?:cdn)?\.com\//i.test(song.imageUrl)
+  cover.src=song.imageUrl&&/^https:\/\/(?:i\.scdn\.co|mosaic\.scdn\.co|[a-z0-9.-]+\.spotifycdn\.com|[a-z0-9.-]+\.spotify\.com)\//i.test(song.imageUrl)
     ?song.imageUrl:assets['player/default-cover'];
   connection.textContent=state.demo?'● Demo':'● Spotify';
   tag.textContent=state.demo?'DEMO':'LIVE';
