@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "reference": "assets/geekify/reference/approved-composition.png",
-  "description": "Original Geekify sprites cut from approved asset artwork, with detached label/glow removal and crisp limited-palette pixel edges. All lyrics and button labels remain dynamic.",
+  "description": "Original Geekify sprites plus repeatable pixel-art parchment tiles, torn edges and separately anchored repeating forest border.",
   "assets": [
     {
       "id": "frame/corner-tl",
@@ -588,6 +588,66 @@
       ],
       "source": "geekify_sepia_lyrics_interface.png",
       "role": "demo cover only; live Spotify art is dynamic"
+    },
+    {
+      "id": "paper/grain-tile",
+      "file": "assets/geekify/ui/paper/grain-tile.svg",
+      "size": [
+        256,
+        256
+      ],
+      "source": "Geekify original tileable sprite set",
+      "role": "seamless pixel-paper grain, repeating native 256px"
+    },
+    {
+      "id": "paper/torn-top",
+      "file": "assets/geekify/ui/paper/torn-top.svg",
+      "size": [
+        256,
+        36
+      ],
+      "source": "Geekify original tileable sprite set",
+      "role": "ragged top paper edge, repeat-x"
+    },
+    {
+      "id": "paper/torn-bottom",
+      "file": "assets/geekify/ui/paper/torn-bottom.svg",
+      "size": [
+        256,
+        34
+      ],
+      "source": "Geekify original tileable sprite set",
+      "role": "ragged bottom paper edge, repeat-x"
+    },
+    {
+      "id": "paper/worn-left",
+      "file": "assets/geekify/ui/paper/worn-left.svg",
+      "size": [
+        24,
+        256
+      ],
+      "source": "Geekify original tileable sprite set",
+      "role": "torn punched edge, repeat-y"
+    },
+    {
+      "id": "paper/worn-right",
+      "file": "assets/geekify/ui/paper/worn-right.svg",
+      "size": [
+        18,
+        256
+      ],
+      "source": "Geekify original tileable sprite set",
+      "role": "distressed right edge, repeat-y"
+    },
+    {
+      "id": "paper/forest-edge",
+      "file": "assets/geekify/ui/paper/forest-edge.svg",
+      "size": [
+        384,
+        130
+      ],
+      "source": "Geekify original tileable sprite set",
+      "role": "pixel pine and mountain border, repeat-x"
     }
   ]
 }
