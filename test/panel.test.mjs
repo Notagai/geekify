@@ -53,3 +53,28 @@ test('Extension files have valid JavaScript syntax',()=>{
     assert.equal(result.status,0,result.stderr);
   }
 });
+
+test('wood-and-ivy branding and all navigation icons use complete pixel sprites',()=>{
+  const ui=readFileSync(resolve(root,'vscode/panel.js'),'utf8');
+  const css=readFileSync(resolve(root,'vscode/panel.css'),'utf8');
+  const manifest=JSON.parse(readFileSync(resolve(root,'assets/geekify/manifest.json'),'utf8'));
+  const ivy=manifest.assets.find(item=>item.id==='branding/ivy-corner');
+  assert.ok(ivy,'Wooden logo ivy sprite must be registered');
+  assert.ok(existsSync(resolve(root,ivy.file)),'Ivy SVG must exist in extension assets');
+  assert.ok(ui.includes("make('span','brand-vine',brand)"));
+  assert.ok(ui.includes("make('div','brand-badge',brand)"));
+  assert.ok(ui.includes("brandBadge.append(icon('brand'))"));
+  assert.ok(css.includes('background-image:var(--brand-vine-image)'));
+  assert.ok(css.includes('background-image:linear-gradient(180deg,#b2734380,#4a230e90),var(--wood-image)'));
+  assert.ok(css.includes('grid-template-columns:20px minmax(0,1fr)'));
+  assert.ok(css.includes('.nav-item.selected .pixel-icon'));
+  assert.ok(!css.includes('background-image:var(--active-image)'),'cropped selector skin must not be used');
+  const start=ui.indexOf('const pixelGlyphs=');
+  const end=ui.indexOf('function icon(',start);
+  assert.ok(start!==-1&&end>start);
+  const rows=[...ui.slice(start,end).matchAll(/'([.#]+)'/g)].map(m=>m[1]);
+  assert.ok(rows.length>=100,'Expected pixel-grid sprites for icons and controls');
+  assert.ok(rows.every(r=>r.length===16),'Pixel glyph rows must be exactly 16 pixels wide');
+  assert.ok(ui.includes("pixel.setAttribute('width',String(end-x))"));
+  assert.ok(css.includes('shape-rendering:crispEdges'));
+});
