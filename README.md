@@ -27,6 +27,27 @@ If the automatic install fails, run `npm run extension:install` inside the Geeki
 
 The CLI first calls the extension's local, authenticated bridge to reveal its webview panel, falling back to VS Code's URI handler for initial activation. Unlike the old terminal graphics mode, the panel loads the original Geekify artwork only once and updates song data with real DOM elements. It does not use the old full-screen SVG-to-PNG-to-terminal transfer loop.
 
+## Seamless parchment sprites (v0.4.7)
+
+The main paper panel no longer stretches a full-page image to the dimensions
+of the VS Code editor. Six new reusable pixel-art SVG sprites in
+`assets/geekify/ui/paper/` now define the paper:
+
+- `grain-tile.svg`: native-size 256×256 repeating paper grain
+- `torn-top.svg` / `torn-bottom.svg`: horizontally repeating torn edges
+- `worn-left.svg` / `worn-right.svg`: vertically repeating distressed edges and holes
+- `forest-edge.svg`: larger, anchored, horizontally repeating mountain and pine
+  forest that does not stretch to the panel width
+
+The CSS composes these independent layers. On shorter and narrower panes,
+only the forest's vertical size changes; paper grain and edge tiles remain
+at their native proportions. The paper content reserves bottom space for the
+forest and scrolls when necessary.
+
+Install the updated extension with `git pull origin main`, `npm install`,
+`npm link`, then `geekify`. Reload the VS Code window after the install
+to replace the previously loaded webview.
+
 ## Webview artwork and responsive layout repair (v0.4.6)
 
 Several sprites in the original generated asset sheet were genuinely truncated or
