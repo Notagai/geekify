@@ -235,7 +235,7 @@ async function activate(context,{startBridge=startPanelBridge,status=writeStatus
   try{
     context.subscriptions.push(
       vscode.commands.registerCommand('geekify.open',()=>open(false)),
-      vscode.commands.registerUriHandler({
+      vscode.window.registerUriHandler({
         handleUri:async uri=>{
           if(uri.path!=='/open')return;
           const params=new URLSearchParams(uri.query);
