@@ -1,5 +1,5 @@
-// WezTerm image-mode Geekify. An honest terminal application, not a browser window.
-// Uses iTerm2 OSC 1337 inline PNGs and SGR mouse tracking; no terminal plugin needed.
+// Ren's graphical Geekify, rendered inside the existing terminal pane.
+// VS Code uses Kitty graphics; selected other terminals can use inline PNGs.
 import sharp from 'sharp';
 import { stdin, stdout } from 'node:process';
 import { SpotifyApi, trackInfo } from './spotify.mjs';
@@ -69,17 +69,18 @@ export class RenGraphicsApp {
   }
   async run(){
     if(!stdin.isTTY||!stdout.isTTY)throw new Error('Ren graphics mode needs an interactive terminal.');
+    // Even when VS Code doesn't advertise TERM_PROGRAM, try the supported
+    // Kitty query. Guessing "no graphics" from missing env vars caused the
+    // silent ANSI UI seen in user testing.
     this.protocol=preferredGraphicsProtocol();
-    if(this.forceImages&&this.protocol==='ansi')this.protocol='kitty';
-    if(this.protocol==='ansi')throw new Error('This terminal has no detected image protocol. ' +
-      'Inside VS Code, enable terminal.integrated.enableImages and run geekify --ren. ' +
-      'For a text fallback, use geekify --ren-ansi.');
+    if(this.protocol==='ansi')this.protocol='kitty';
     if(this.protocol==='kitty'&&!this.forceImages){
       const supported=await probeKittyGraphics({input:stdin,output:stdout});
       if(!supported)throw new Error('VS Code graphics are disabled or unavailable. Set ' +
         'terminal.integrated.enableImages=true and terminal.integrated.gpuAcceleration=auto. ' +
         'On Windows, also set terminal.integrated.windowsUseConptyDll=true. ' +
-        'Restart the terminal. Use --force-images to skip the check.');
+        'Restart the terminal, then run geekify graphics-check. ' +
+        'Use --force-images only to skip the check.');
     }
     this.running=true;
     this.enter();
