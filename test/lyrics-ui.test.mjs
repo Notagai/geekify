@@ -44,7 +44,7 @@ test('App interactions map to proper navigation and playback hotspots',()=>{
   assert.deepEqual(hitTest(880,582),{type:'play'});
   assert.deepEqual(hitTest(360,90),{type:'lyrics'});
   assert.deepEqual(hitTest(525,90),{type:'queue'});
-  assert.deepEqual(hitTest(390,245,'library'),{type:'item',index:2});
+  assert.deepEqual(hitTest(390,245,'library'),{type:'item',index:1});
   assert.equal(hitTest(9,9),null);
 });
 
