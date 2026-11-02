@@ -1,0 +1,14 @@
+.github/**
+test/**
+assets/geekify/reference/**
+assets/geekify/ASSETS.md
+.gitignore
+node_modules/**
+dist/**
+*.vsix
+scripts/**
+src/app.js
+src/scene.js
+src/spotify.js
+styles.css
+index.html
