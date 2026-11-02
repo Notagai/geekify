@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,rmSync,writeFileSync} from 'node:fs';
-import {join} from 'node:path';
+import {join,dirname} from 'node:path';
+import {existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {runExecutable,runVsCode,windowsCommandLine,resolveVsCodeCommand} from '../cli/vscode-command.mjs';
+import {runExecutable,runVsCode,windowsCommandLine,resolveVsCodeCommand,runNpm} from '../cli/vscode-command.mjs';
 
 test('cmd /s /c command is enclosed once and preserves individual argument quotes',()=>{
   assert.equal(
@@ -77,4 +78,11 @@ test('Windows: spawn real .cmd shim with spaces and pass VSIX path as one argume
     }finally{
       rmSync(dir,{recursive:true,force:true});
     }
+  });
+
+test('Windows: npm commands work without resolving an npm.cmd in the working directory',
+  {skip:process.platform!=='win32'||!existsSync(join(dirname(process.execPath),'node_modules','npm','bin','npm-cli.js'))},()=>{
+    const result=runNpm(['--version']);
+    assert.equal(result.status,0,result.stderr||String(result.error||''));
+    assert.match(result.stdout,/^\d+\.\d+\.\d+/);
   });
