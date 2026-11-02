@@ -83,17 +83,18 @@ export class GeekifyGraphicsApp {
     return this.playback.device.id||undefined;
   }
   async loadAssets(){
-    // Exact Geekify art pack, independent PNG components from the approved design.
-    // Dynamic lyrics, tab labels, cover art and track metadata remain live.
+    // Each asset is a separate original Geekify pixel-art PNG, not a screenshot.
+    // Load all skins once; image rendering then composites them with live lyrics.
     const manifest=JSON.parse(readFileSync(new URL('../assets/geekify/manifest.json',import.meta.url),'utf8'));
-    const entries=manifest.assets;
-    for(const entry of entries){
-      const file=new URL('../'+entry.file,import.meta.url);
-      const original=readFileSync(file);
-      this.assets[entry.id]='data:image/png;base64,'+original.toString('base64');
+    const root=new URL('../',import.meta.url);
+    this.assets={};
+    for(const item of manifest.assets){
+      const bytes=readFileSync(new URL('../'+item.file,import.meta.url));
+      this.assets[item.id]='data:image/png;base64,'+bytes.toString('base64');
     }
-    if(!this.assets['paper/lyrics-panel']||!this.assets['frame/wood-tile'])
-      throw new Error('Original Geekify art pack is incomplete.');
+    if(!this.assets['paper/lyrics-panel']||!this.assets['frame/wood-tile']){
+      throw new Error('Geekify artwork pack incomplete. Please reinstall or update the repo.');
+    }
   }
   async cycleRepeat(){
     const modes=['off','context','track'];
@@ -226,7 +227,7 @@ export class GeekifyGraphicsApp {
     this.tab=tab;this.selected=0;this.listOffset=0;
     if(tab==='now')this.subtab='lyrics';
     this.playlist=null;this.draw();
-    if(tab!=='now')await this.loadList();
+    if(tab!=='now'&&tab!=='settings')await this.loadList();
   }
   async loadList(offset=this.listOffset){
     if(this.demo){this.list=[];this.listTotal=0;this.draw();return;}
@@ -234,6 +235,7 @@ export class GeekifyGraphicsApp {
     this.loading=true;this.listOffset=offset;this.list=[];this.selected=0;this.draw();
     try{
       let response;
+      if(this.tab==='settings'){return;}
       if(this.tab==='search'){
         if(!this.query)return;
         response=(await this.api.search(this.query,offset))?.tracks;
