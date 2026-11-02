@@ -47,3 +47,11 @@ jobs:
           assert not missing, f"VSIX is missing runtime files: {missing}"
           print("Verified",len(required),"required runtime files in",artifact)
           PY
+  windows-cli:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test test/windows-launch.test.mjs
