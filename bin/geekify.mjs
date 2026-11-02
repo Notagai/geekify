@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { stdin, stdout } from 'node:process';
 import { GeekifyTui } from '../cli/ui.mjs';
 import { RenGraphicsApp } from '../cli/ren-graphics.mjs';
+import { preferredGraphicsProtocol } from '../cli/terminal-graphics.mjs';
 import { runDoctor } from '../cli/doctor.mjs';
 import { loadConfig, login, logout, redirectUri } from '../cli/auth.mjs';
 
@@ -13,10 +14,10 @@ const help=`geekify.  /  your music, in the terminal
 Usage:
   geekify               Launch the interactive Spotify-style interface
   geekify demo          Launch a no-account demo
-  geekify --ren         Launch high-detail Ren image app (WezTerm)
+  geekify --ren         Launch Ren's graphical app inside VS Code terminal
   geekify demo --ren    Preview graphical Ren without Spotify credentials
   geekify --ren-ansi    Preview original ANSI sprite fallback
-  geekify --ren --force-images   Try image mode in a compatible terminal
+  geekify --ren --force-images   Skip terminal image support probe
   geekify login         Connect a Spotify account using OAuth PKCE
   geekify doctor        Check scopes and Spotify Connect devices (read-only)
   geekify logout        Clear the stored Spotify session
@@ -78,8 +79,15 @@ async function main(){
   if(command==='demo'||command===undefined||command==='--ren'||command==='--ren-ansi'){
     const demo=command==='demo';
     if(ren){
-      const app=new RenGraphicsApp({demo,forceImages});
-      await app.run();
+      if(!forceImages&&preferredGraphicsProtocol()==='ansi'){
+        console.error('geekify: this terminal has no detected image protocol; using Ren ANSI fallback.');
+        console.error('For graphical Ren inside VS Code, enable terminal.integrated.enableImages.');
+        const app=new GeekifyTui({demo,mascot:'ren'});
+        await app.run();
+      }else{
+        const app=new RenGraphicsApp({demo,forceImages});
+        await app.run();
+      }
     }else{
       const app=new GeekifyTui({demo,mascot:ansiRen?'ren':null});
       await app.run();
