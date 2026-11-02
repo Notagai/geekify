@@ -221,13 +221,13 @@ async function openPanel(context,forceDemo=false){
     closed=true;clearTimeout(pollTimer);lyricAbort?.abort();activePanel=null;
   });
 }
-async function activate(context){
-  writeStatus('activating');
+async function activate(context,{startBridge=startPanelBridge,status=writeStatus}={}){
+  status('activating');
   const open=async demo=>{
     try{await openPanel(context,demo);}
     catch(error){
       const reason=safeError(error);
-      writeStatus('open-error',reason);
+      status('open-error',reason);
       vscode.window.showErrorMessage('Geekify could not open its player: '+reason);
       throw error;
     }
@@ -247,16 +247,16 @@ async function activate(context){
       })
     );
   }catch(error){
-    writeStatus('registration-error',safeError(error));
+    status('registration-error',safeError(error));
     throw error;
   }
   try{
-    const bridge=await startPanelBridge(open);
+    const bridge=await startBridge(open);
     context.subscriptions.push({dispose:()=>bridge.close()});
-    writeStatus('ready');
+    status('ready');
   }catch(error){
     const reason=safeError(error);
-    writeStatus('bridge-error',reason);
+    status('bridge-error',reason);
     vscode.window.showWarningMessage('Geekify panel bridge unavailable: '+reason+
       '. Use the command palette: Geekify: Open Player.');
   }
