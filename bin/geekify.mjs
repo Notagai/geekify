@@ -6,7 +6,7 @@ import {readFileSync,rmSync} from 'node:fs';
 import {dirname,join} from 'node:path';
 import {homedir} from 'node:os';
 import {setTimeout as sleep} from 'node:timers/promises';
-import {runVsCode,runExecutable} from '../cli/vscode-command.mjs';
+import {runVsCode,runNpm} from '../cli/vscode-command.mjs';
 import {requestPanelOpen} from '../cli/panel-bridge.mjs';
 import {fileURLToPath} from 'node:url';
 import {stdin,stdout} from 'node:process';
@@ -47,7 +47,7 @@ function getExtensionVersion(){
 }
 function installPanelExtension(){
   console.log('Installing Geekify '+installedVersion+' into VS Code (one-time setup / update)…');
-  const result=runExecutable('npm',['run','extension:install'],{
+  const result=runNpm(['run','extension:install'],{
     cwd:packageRoot,stdio:'inherit',timeout:180000
   });
   if(result.error||result.status!==0)throw new Error(
