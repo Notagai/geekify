@@ -1,24 +1,50 @@
 {
   "name": "geekify",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
-  "description": "Pixel-art web music experience and Spotify terminal UI.",
+  "description": "Geekify VS Code pixel-art panel and fast Spotify terminal player.",
   "bin": {
-    "geekify": "./bin/geekify.mjs"
+    "geekify": "./bin/geekify.mjs",
+    "geekify-fast": "./bin/geekify-fast.mjs"
   },
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "tui": "node bin/geekify.mjs",
-    "cli:smoke": "node bin/geekify.mjs --help && node bin/geekify.mjs --version",
+    "tui": "node bin/geekify-fast.mjs",
+    "cli:smoke": "node bin/geekify.mjs --help && node bin/geekify.mjs --version && node bin/geekify-fast.mjs --help",
     "build": "node scripts/build.mjs",
     "test": "node --test",
-    "tui:demo": "node bin/geekify.mjs demo"
+    "tui:demo": "node bin/geekify-fast.mjs demo",
+    "extension:package": "npx --yes @vscode/vsce@3.6.0 package --allow-missing-repository --no-dependencies",
+    "extension:install": "npm run extension:package && node scripts/install-extension.mjs"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20",
+    "vscode": "^1.90.0"
   },
   "dependencies": {
     "sharp": "^0.34.4"
-  }
+  },
+  "publisher": "notagai",
+  "displayName": "Geekify",
+  "main": "./vscode/extension.cjs",
+  "activationEvents": [
+    "onCommand:geekify.open",
+    "onUri"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "geekify.open",
+        "title": "Geekify: Open Player"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Notagai/geekify.git"
+  },
+  "categories": [
+    "Other"
+  ]
 }
