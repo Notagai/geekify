@@ -27,6 +27,21 @@ If the automatic install fails, run `npm run extension:install` inside the Geeki
 
 The CLI first calls the extension's local, authenticated bridge to reveal its webview panel, falling back to VS Code's URI handler for initial activation. Unlike the old terminal graphics mode, the panel loads the original Geekify artwork only once and updates song data with real DOM elements. It does not use the old full-screen SVG-to-PNG-to-terminal transfer loop.
 
+## Wood logo, leaf sprite and pixel icons (v0.4.8)
+
+The VS Code panel's Geekify wordmark uses a textured wooden badge again
+with a new transparent pixel-art ivy sprite
+(`assets/geekify/ui/branding/ivy-corner.svg`).
+The brand headphone, six navigation icons, and transport glyphs are rendered
+as filled 16×16 pixel-grid shapes rather than antialiased line drawings.
+Sidebar buttons now have aligned icon and text grid columns and an entirely
+CSS-drawn active state, replacing the visibly cropped `button-active.png` source.
+The new icons have explicit crisp-edge rendering and responsive spacing.
+The terminal-only `geekify-fast` remains unchanged.
+
+Install with `git pull origin main`, `npm install`, `npm link`, and
+`geekify`. Reload the VS Code window after the extension updates.
+
 ## Seamless parchment sprites (v0.4.7)
 
 The main paper panel no longer stretches a full-page image to the dimensions
