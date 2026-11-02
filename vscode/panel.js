@@ -1,105 +1,156 @@
 'use strict';
-// DOM-based visual player: static PNG layers load once; only text/progress change.
+// Geekify's working UI is native DOM. The sprite-sheet controls were visibly
+// cropped in their source PNGs, so interactive icons use complete inline SVG.
 const vscode=acquireVsCodeApi();
 const assets=JSON.parse(document.getElementById('assets').textContent);
-const board=document.getElementById('board'),viewport=document.getElementById('viewport');
-const status=document.getElementById('audioStatus'),listen=document.getElementById('listenHere');
-const art=(key,x,y,w,h,extra='')=>{
-  const node=document.createElement('img');node.src=assets[key]||'';
-  node.alt='';node.style.left=x+'px';node.style.top=y+'px';
-  node.style.width=w+'px';node.style.height=h+'px';
-  if(extra)node.className=extra;board.append(node);return node;
+const board=document.getElementById('board');
+const status=document.getElementById('audioStatus');
+const listen=document.getElementById('listenHere');
+const NS='http://www.w3.org/2000/svg';
+const icons={
+ now:'<rect x="4" y="5" width="16" height="14" rx="1"/><path d="M10 9l6 3-6 3z" fill="currentColor" stroke="none"/>',
+ search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/>',
+ library:'<path d="M3 4h7v16H3zM12 4h8v16h-8zM5 8h3M14 8h4M5 16h3M14 16h4"/>',
+ playlists:'<path d="M4 6h3M10 6h11M4 12h3M10 12h11M4 18h3M10 18h11"/>',
+ devices:'<rect x="3" y="4" width="14" height="12" rx="1"/><path d="M7 20h11M11 16v4M19 7h2v12h-6v-2"/>',
+ settings:'<path d="M9 2h6l1 3 3 1 2 5-2 2 1 3-5 4-3-1-3 1-4-4 1-3-2-2 2-5 3-1z"/><circle cx="12" cy="11" r="3"/>',
+ shuffle:'<path d="M3 7h3c4 0 7 10 11 10h4m-4-3 4 3-4 3M3 17h3c2 0 3-2 4-4m4-4c1-2 2-2 4-2h3m-4-3 4 3-4 3"/>',
+ previous:'<path d="M5 5v14M18 5l-11 7 11 7z" fill="currentColor" stroke="none"/>',
+ pause:'<path d="M7 5h4v14H7zM15 5h4v14h-4z" fill="currentColor" stroke="none"/>',
+ play:'<path d="M7 4l13 8-13 8z" fill="currentColor" stroke="none"/>',
+ next:'<path d="M19 5v14M6 5l11 7-11 7z" fill="currentColor" stroke="none"/>',
+ repeat:'<path d="M4 9V7a3 3 0 0 1 3-3h12l-3-3m3 3-3 3M20 15v2a3 3 0 0 1-3 3H5l3 3m-3-3 3-3"/>',
+ heart:'<path d="M12 21 3 12C-1 7 5 1 10 6l2 2 2-2c5-5 11 1 7 6z"/>'
 };
-function el(tag,cls,x,y,w,h){
-  const node=document.createElement(tag);
-  if(cls)node.className=cls;
-  Object.assign(node.style,{left:x+'px',top:y+'px',width:w+'px',height:h+'px'});
-  board.append(node);return node;
+function icon(name){
+  const svg=document.createElementNS(NS,'svg');
+  svg.setAttribute('viewBox','0 0 24 24');
+  svg.setAttribute('aria-hidden','true');
+  svg.classList.add('pixel-icon');
+  svg.innerHTML=icons[name]||icons.now;
+  return svg;
 }
-function label(cls,x,y,w,h,text){
-  const node=el('div',cls,x,y,w,h);node.textContent=text;return node;
+function make(tag,cls,parent,text){
+  const n=document.createElement(tag);
+  if(cls)n.className=cls;
+  if(text!==undefined)n.textContent=text;
+  parent.append(n);
+  return n;
 }
-function btn(cls,x,y,w,h,text,fn){
-  const node=el('button',cls,x,y,w,h);node.type='button';node.textContent=text;
-  node.addEventListener('click',fn);return node;
+function button(cls,parent,text,fn){
+  const n=make('button',cls,parent);
+  n.type='button';
+  if(text!==undefined)n.textContent=text;
+  n.addEventListener('click',fn);
+  return n;
 }
-function send(name,more={}){vscode.postMessage({type:'action',name,...more});}
+function send(name,extra={}){vscode.postMessage({type:'action',name,...extra});}
 let state={demo:true,track:null,progressMs:0,playing:false,lyrics:[],items:[],queue:[],browseType:''};
-let activeTab='now',activeSub='lyrics',updatedAt=performance.now(),lastTrack='';
-let sdkPlayer=null,sdkDevice=null,tokenSequence=0;
+let activeTab='now',activeSub='lyrics',updatedAt=performance.now();
+let sdkPlayer=null,sdkDevice=null,tokenSequence=0,lyricSignature='',lastSearch='';
 const tokens=new Map();
-function layout(){
-  const width=viewport.clientWidth,height=viewport.clientHeight;
-  const scale=Math.min(width/1200,height/675,2);
-  board.style.transform='scale('+scale+')';
-  board.style.left=(width-1200*scale)/2+'px';
-  board.style.top=(height-675*scale)/2+'px';
-}
-new ResizeObserver(layout).observe(viewport);
-board.style.backgroundImage='url("'+assets['frame/wood-tile']+'")';
-art('frame/edge-top',42,4,1116,33);
-art('frame/edge-bottom',40,640,1120,31);
-art('frame/edge-left',1,41,34,602);
-art('frame/edge-right',1161,40,39,606);
-for(const [id,x,y,w,h] of [
- ['frame/corner-tl',0,0,73,70],['frame/corner-tr',1127,0,73,70],
- ['frame/corner-bl',0,600,73,75],['frame/corner-br',1127,600,73,75],
- ['branding/logo-tag',49,12,232,97],['decor/vine',5,0,103,145],
- ['decor/flowers',15,409,115,109],['decor/polaroid',124,405,111,104],
- ['paper/lyrics-panel',266,78,900,436],['decor/tape',1018,85,115,68],
- ['paper/player-panel',29,528,1141,127]
-])art(id,x,y,w,h);
+
+// Every region sizes to the real webview. A narrow editor stacks the sidebar,
+// parchment and transport controls; no more 1200px canvas scaled to a stamp.
+board.style.setProperty('--wood-image','url("'+assets['frame/wood-tile']+'")');
+board.style.setProperty('--parchment-image','url("'+assets['paper/lyrics-panel']+'")');
+board.style.setProperty('--player-image','url("'+assets['paper/player-panel']+'")');
+board.style.setProperty('--idle-image','url("'+assets['sidebar/button-idle']+'")');
+board.style.setProperty('--active-image','url("'+assets['sidebar/button-active']+'")');
+board.style.setProperty('--flowers-image','url("'+assets['decor/flowers']+'")');
+board.style.setProperty('--polaroid-image','url("'+assets['decor/polaroid']+'")');
+const frame=make('div','desk',board);
+const header=make('header','desk-header',frame);
+const brand=make('div','brand-mark',header);
+brand.append(icon('now'));
+make('span','brand-label',brand,'geekify.');
+const connection=make('span','connection',header,'● Spotify');
+const workspace=make('div','workspace',frame);
+const sidebar=make('aside','sidebar',workspace);
+const nav=make('nav','sidebar-nav',sidebar);
+nav.setAttribute('aria-label','Geekify sections');
+const navDefs=[
+ ['now','Now Playing'],['search','Search'],['library','Library'],
+ ['playlists','Playlists'],['devices','Devices'],['settings','Settings']
+];
 const navButtons=[];
-const navNames=['Now Playing','Search','Library','Playlists','Devices','Settings'];
-const navIds=['now','search','library','playlists','devices','settings'];
-const navIcons=['icon-now','icon-search','icon-library','icon-playlists','icon-devices','icon-settings'];
-navIds.forEach((id,i)=>{
-  const y=133+i*48;
-  const skin=art('sidebar/button-idle',43,y,195,47);
-  art('sidebar/'+navIcons[i],56,y+10,27,27);
-  const button=btn('nav',43,y,195,47,navNames[i],()=>{
-    activeTab=id;activeSub='lyrics';redraw();
+for(const [id,title] of navDefs){
+  const b=button('nav-item',nav,undefined,()=>{
+    activeTab=id;activeSub='lyrics';lyricSignature='';
     if(id==='library'||id==='playlists'||id==='devices')send(id);
+    redraw();
   });
-  navButtons.push({id,button,skin});
-});
+  b.append(icon(id));
+  make('span','nav-text',b,title);
+  b.setAttribute('aria-label',title);
+  navButtons.push({id,button:b});
+}
+const decor=make('div','sidebar-decor',sidebar);
+make('div','decor-flowers',decor).setAttribute('aria-hidden','true');
+make('div','decor-photo',decor).setAttribute('aria-hidden','true');
+const sheet=make('section','parchment',workspace);
+const tabs=make('div','paper-tabs',sheet);
 const subButtons=[];
-['lyrics','queue','info'].forEach((id,i)=>{
-  const x=303+i*143;
-  const skin=art('paper/tab-inactive',x,77,144,54);
-  const button=btn('subtab',x,77,144,54,id[0].toUpperCase()+id.slice(1),()=>{
-    activeTab='now';activeSub=id;
-    if(id==='queue')send('queue');redraw();
+for(const id of ['lyrics','queue','info']){
+  const b=button('paper-tab',tabs,id[0].toUpperCase()+id.slice(1),()=>{
+    activeTab='now';activeSub=id;lyricSignature='';
+    if(id==='queue')send('queue');
+    redraw();
   });
-  subButtons.push({id,button,skin});
-});
-const paper=el('div','paper-content',329,181,760,322);
-const cover=art('player/default-cover',80,546,88,88,'art-cover');
-art('player/album-frame',74,541,102,104);
-const title=label('player-title',195,548,268,33,'Midnight Frequency');
-const artist=label('player-artist',195,582,290,28,'geekify sessions');
-const heart=art('player/heart',452,548,31,29);
-btn('hit',446,545,46,43,'',()=>send('save')).setAttribute('aria-label','Save to Liked Songs');
-const time=label('time',194,616,65,25,'0:00');
-const duration=label('time',650,616,60,25,'2:16');
-art('player/progress-empty',246,604,383,36);
-const fill=art('player/progress-fill',247,604,380,36);
-const knob=art('player/progress-knob',242,608,30,30);
-const progress=el('button','progress-hit',248,605,380,30);
-progress.setAttribute('aria-label','Seek through song');
-progress.addEventListener('click',e=>send('seek',{ratio:(e.clientX-progress.getBoundingClientRect().left)/progress.getBoundingClientRect().width}));
-const transport=[['shuffle',742,561,54,52,'shuffle'],['previous',800,561,55,52,'previous'],
-  ['pause',860,554,67,68,'toggle'],['next',934,561,56,52,'next'],
-  ['repeat',992,561,56,52,'repeat']];
+  subButtons.push({id,button:b});
+}
+const paper=make('div','paper-content',sheet);
+paper.setAttribute('aria-live','polite');
+const player=make('section','player-panel',frame);
+player.setAttribute('aria-label','Music playback');
+const artWrap=make('div','album-art-frame',player);
+const cover=make('img','album-art',artWrap);
+cover.alt='Album cover';
+cover.src=assets['player/default-cover'];
+const songInfo=make('div','song-info',player);
+const title=make('div','player-title',songInfo,'Midnight Frequency');
+const artist=make('div','player-artist',songInfo,'geekify sessions');
+const saveButton=button('save-button',songInfo,undefined,()=>send('save'));
+saveButton.append(icon('heart'));
+saveButton.setAttribute('aria-label','Save current song');
+const playback=make('div','playback',player);
+const controls=make('div','transport-controls',playback);
 const transportButtons={};
-transport.forEach(([id,x,y,w,h,action])=>{
-  art('player/'+id,x,y,w,h);
-  transportButtons[id]=btn('hit',x,y,w,h,'',()=>send(action));
-  transportButtons[id].setAttribute('aria-label',action);
+for(const [id,action,description] of [
+ ['shuffle','shuffle','Toggle shuffle'],['previous','previous','Previous song'],
+ ['pause','toggle','Pause or play'],['next','next','Next song'],
+ ['repeat','repeat','Change repeat mode']
+]){
+  const b=button('transport '+(id==='pause'?'transport-primary':''),controls,undefined,()=>send(action));
+  b.append(icon(id));
+  b.setAttribute('aria-label',description);
+  transportButtons[id]=b;
+}
+const timeline=make('div','timeline-row',playback);
+const time=make('span','time-start',timeline,'0:00');
+const progress=make('div','seek-track',timeline);
+progress.setAttribute('role','slider');
+progress.setAttribute('tabindex','0');
+progress.setAttribute('aria-label','Seek through song');
+progress.setAttribute('aria-valuemin','0');
+progress.setAttribute('aria-valuemax','100');
+progress.setAttribute('aria-valuenow','0');
+const fill=make('div','seek-fill',progress);
+const knob=make('div','seek-knob',progress);
+const duration=make('span','time-end',timeline,'2:16');
+const tag=make('span','playback-tag',player,'DEMO');
+progress.addEventListener('click',e=>send('seek',{
+  ratio:Math.max(0,Math.min(1,(e.clientX-progress.getBoundingClientRect().left)/
+    progress.getBoundingClientRect().width))
+}));
+progress.addEventListener('keydown',e=>{
+  if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
+  e.preventDefault();
+  const step=e.key==='ArrowLeft'?-0.05:e.key==='ArrowRight'?0.05:0;
+  const ratio=e.key==='Home'?0:e.key==='End'?1:
+    Math.max(0,Math.min(1,(Number(progress.getAttribute('aria-valuenow'))||0)/100+step));
+  send('seek',{ratio});
 });
-const playGlyph=label('badge',891,579,34,33,'');
-const tag=label('badge',1080,587,60,25,'DEMO');
-const connection=label('status',795,35,290,27,'● Demo');
 function msClock(ms){const t=Math.max(0,Math.floor((Number(ms)||0)/1000));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');}
 function truncate(value,max=65){const text=String(value||'');return text.length>max?text.slice(0,max-1)+'…':text;}
 function advance(){if(!state.playing)return state.progressMs||0;return Math.min(state.track?.durationMs||0,(state.progressMs||0)+(performance.now()-updatedAt));}
