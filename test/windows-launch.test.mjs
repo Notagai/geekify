@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,rmSync,writeFileSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,rmSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {runExecutable,runVsCode,windowsCommandLine} from '../cli/vscode-command.mjs';
+import {runExecutable,runVsCode,windowsCommandLine,resolveVsCodeCommand} from '../cli/vscode-command.mjs';
 
 test('cmd /s /c command is enclosed once and preserves individual argument quotes',()=>{
   assert.equal(
@@ -22,8 +22,37 @@ test('cmd /s /c command is enclosed once and preserves individual argument quote
 test('Windows: spawn real .cmd shim with spaces and pass VSIX path as one argument',
   {skip:process.platform!=='win32'},()=>{
     const dir=mkdtempSync(join(tmpdir(),'geekify windows CLI spaces '));
-    const shim=join(dir,'visual player.cmd');
+    const root=join(dir,'VS Code');
+    const bin=join(root,'bin');
+    const resource=join(root,'resources','app','out');
+    mkdirSync(bin,{recursive:true});mkdirSync(resource,{recursive:true});
+    writeFileSync(join(root,'Code.exe'),'fixture');
+    writeFileSync(join(resource,'cli.js'),'fixture');
+    const shim=join(bin,'code.cmd');
     writeFileSync(shim,'@echo off\r\necho ARG1=%~1\r\necho ARG2=%~2\r\n');
+    const badShadow=join(dir,'code.cmd');
+    writeFileSync(badShadow,'@echo off\r\nexit /b 9009\r\n');
+    assert.equal(resolveVsCodeCommand({
+      env:{LOCALAPPDATA:join(dir,'none')},
+      whereOutput:[badShadow,shim].join('\r\n')
+    }),shim,'ignore shadowed/broken code.cmd and use actual VS Code install');
+    assert.equal(resolveVsCodeCommand({env:{GEEKIFY_VSCODE_COMMAND:shim}}),shim);
+    assert.throws(()=>resolveVsCodeCommand({
+      env:{GEEKIFY_VSCODE_COMMAND:badShadow}
+    }),/valid VS Code/);
+    const local=join(dir,'local app');
+    const standardRoot=join(local,'Programs','Microsoft VS Code');
+    const standardBin=join(standardRoot,'bin');
+    mkdirSync(join(standardRoot,'resources','app','out'),{recursive:true});
+    mkdirSync(standardBin,{recursive:true});
+    const standardShim=join(standardBin,'code.cmd');
+    writeFileSync(join(standardRoot,'Code.exe'),'fixture');
+    writeFileSync(join(standardRoot,'resources','app','out','cli.js'),'fixture');
+    writeFileSync(standardShim,'@echo off\r\n');
+    assert.equal(resolveVsCodeCommand({
+      env:{LOCALAPPDATA:local},
+      whereOutput:badShadow
+    }),standardShim,'standard VS Code install takes priority over broken PATH');
     try{
       const version=runExecutable(shim,['--list-extensions','--show-versions']);
       assert.equal(version.status,0,JSON.stringify(version));
