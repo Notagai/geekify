@@ -46,6 +46,13 @@ export class SpotifyApi {
     return null;
   }
   async playback(){return this.request('/me/player');}
+  async queue(){return this.request('/me/player/queue');}
+  async seek(positionMs,deviceId){
+    return this.request('/me/player/seek',{method:'PUT',query:{
+      position_ms:Math.max(0,Math.floor(Number(positionMs)||0)),
+      ...(deviceId?{device_id:deviceId}:{})
+    }});
+  }
   async search(q,offset=0){return this.request('/search',{query:{q,type:'track',limit:25,offset}});}
   async saved(offset=0){return this.request('/me/tracks',{query:{limit:25,offset}});}
   async playlists(offset=0){return this.request('/me/playlists',{query:{limit:25,offset}});}

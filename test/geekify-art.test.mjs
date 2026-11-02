@@ -53,9 +53,22 @@ test('Six navigation tabs and image-backed playback control hotspots',()=>{
   assert.deepEqual(hitTest(880,582),{type:'play'});
   assert.deepEqual(hitTest(360,90),{type:'lyrics'});
   assert.deepEqual(hitTest(525,90),{type:'queue'});
-  assert.deepEqual(hitTest(450,245,'library'),{type:'item',index:2});
+  assert.deepEqual(hitTest(450,245,'library'),{type:'item',index:1});
+  assert.deepEqual(hitTest(450,214,'library'),{type:'item',index:0});
+  assert.deepEqual(hitTest(450,470,'library'),{type:'item',index:8});
+  assert.deepEqual(hitTest(247,618),{type:'seek',ratio:0});
+  assert.deepEqual(hitTest(627,618),{type:'seek',ratio:1});
 });
 
+test('Queue and feedback are real state, not static placeholders',()=>{
+  const assets={};
+  const svg=sceneSvg({tab:'now',subtab:'queue',
+    queueItems:[{title:'Next & <Track>',subtitle:'Artist'}],status:'Spotify unavailable',
+    track:{durationMs:200000},progressMs:0},assets);
+  assert.ok(svg.includes('Next &amp; &lt;Track&gt;'));
+  assert.ok(svg.includes('Spotify unavailable'));
+  assert.ok(!svg.includes('Your Spotify queue is managed by Spotify.'));
+});
 test('Only original Geekify skins are used by the graphical app',()=>{
   const app=readFileSync(resolve(root,'cli/graphics-app.mjs'),'utf8');
   assert.ok(app.includes('assets/geekify/manifest.json'));

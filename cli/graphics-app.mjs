@@ -1,4 +1,4 @@
-// Sprite-free Geekify music desk. Render real Foldered stationery in VS Code terminal.
+// Sprite-free Geekify music desk: render the original modular Geekify artwork in VS Code.
 import sharp from 'sharp';
 import { stdin, stdout } from 'node:process';
 import { readFileSync } from 'node:fs';
@@ -13,14 +13,11 @@ const ESC='\x1b[';
 const DEMO_TRACK={id:'geekify-demo',uri:null,title:'Midnight Frequency',artist:'geekify sessions',
   album:'unreleased transmissions',durationMs:136000};
 const DEMO_LINES=[
-  {timeMs:0,text:'the city is still awake'},
-  {timeMs:10000,text:'somewhere, a radio plays'},
-  {timeMs:25000,text:'warm lights through the window'},
-  {timeMs:40000,text:'and a midnight skyline'},
-  {timeMs:56000,text:'stay with the melody'},
-  {timeMs:75000,text:'lost in the static'},
-  {timeMs:94000,text:'until the sky turns gold'},
-  {timeMs:115000,text:'the night goes on'}
+  {timeMs:0,text:'another signal lost'},
+  {timeMs:22000,text:'in the frequency'},
+  {timeMs:60000,text:'maybe tomorrow'},
+  {timeMs:88000,text:"we'll be quieter"},
+  {timeMs:112000,text:'the city keeps glowing'}
 ];
 const safeError=error=>String(error?.message||error).replace(/[\x00-\x1f\x7f-\x9f]/g,' ').slice(0,112);
 export { encodeInlineImage } from './terminal-graphics.mjs';
@@ -45,20 +42,21 @@ export class GeekifyGraphicsApp {
     this.imageLayout=null;
     this.api=new SpotifyApi();
     this.track=this.demo?DEMO_TRACK:null;
-    this.playing=false;
+    this.playing=this.demo;
     this.tab='now';this.subtab='lyrics';
     this.assets={};
     this.playback=null;
     this.playbackAnchor=performance.now();
-    this.demoAnchor=performance.now();this.demoOffset=0;
+    this.demoAnchor=performance.now();this.demoOffset=this.demo?75000:0;
     this.list=[];this.selected=0;this.listOffset=0;this.listTotal=0;
+    this.queue=[];this.queueLoading=false;this.queueNotice='';this.queueRequest=0;
     this.scrollStart=0;this.loading=false;this.playlist=null;
     this.query='';this.searchActive=false;
     this.coverDataUrl='';this.coverAbort=null;this.trackKey='';
     this.lyrics=this.demo?DEMO_LINES:[];this.abortLyrics=null;
     this.lyricsStatus=this.demo?'synced':'missing';this.lyricsLoading=false;
     this.running=false;this.drawing=false;this.pending=false;
-    this.lastFrame=-1;this.lastRender=0;
+    this.lastFrameKey='';
     this.renderTimer=null;this.pollTimer=null;
     this.status='Space: play/pause   /: search   1-6: tabs   q: exit';
     this.statusUntil=0;
@@ -101,6 +99,34 @@ export class GeekifyGraphicsApp {
     const current=modes.indexOf(this.playback?.repeat_state||'off');
     await this.action(()=>this.api.repeat(modes[(current+1)%modes.length],this.deviceId()));
   }
+  async loadQueue(){
+    if(this.demo){
+      this.queue=[];this.queueNotice='Connect Spotify to view your queue.';this.queueLoading=false;
+      this.draw();return;
+    }
+    const request=++this.queueRequest;
+    this.queueLoading=true;this.queueNotice='';this.draw();
+    try{
+      const result=await this.api.queue();
+      if(request!==this.queueRequest||!this.running)return;
+      this.queue=(result?.queue||[]).slice(0,20).map(trackInfo).filter(Boolean);
+      this.queueNotice=this.queue.length?'':'Your Spotify queue is empty.';
+    }catch(error){
+      if(request!==this.queueRequest||!this.running)return;
+      this.queue=[];
+      this.queueNotice='Queue unavailable: '+safeError(error);
+    }finally{
+      if(request===this.queueRequest){this.queueLoading=false;this.draw();}
+    }
+  }
+  async seekTo(ratio){
+    if(!this.track?.durationMs)return;
+    const position=Math.round(Math.max(0,Math.min(1,Number(ratio)||0))*this.track.durationMs);
+    if(this.demo){
+      this.demoOffset=position;this.demoAnchor=performance.now();this.draw();return;
+    }
+    await this.action(()=>this.api.seek(position,this.deviceId()));
+  }
   async run(){
     if(!stdin.isTTY||!stdout.isTTY)throw new Error('Geekify graphics need an interactive terminal.');
     await this.loadAssets();
@@ -132,7 +158,8 @@ export class GeekifyGraphicsApp {
     await new Promise(resolve=>{this.resolveExit=resolve;});
   }
   enter(){
-    stdout.write(ESC+'?1049h'+ESC+'?25l'+ESC+'?1000h'+ESC+'?1003h'+ESC+'?1006h'+ESC+'H'+ESC+'2J');
+    // Clicks and wheel events only. Reporting every mouse movement floods the terminal.
+    stdout.write(ESC+'?1049h'+ESC+'?25l'+ESC+'?1000h'+ESC+'?1006h'+ESC+'H'+ESC+'2J');
     stdin.setRawMode(true);
     stdin.resume();
   }
@@ -146,7 +173,7 @@ export class GeekifyGraphicsApp {
     process.off('SIGINT',this.signalListener);
     process.off('SIGTERM',this.signalListener);
     try{stdin.setRawMode(false);}catch{}
-    stdout.write(ESC+'?1006l'+ESC+'?1003l'+ESC+'?1000l'+ESC+'?25h'+ESC+'?1049l'+'\x1b[0m');
+    stdout.write(ESC+'?1006l'+ESC+'?1000l'+ESC+'?25h'+ESC+'?1049l'+'\x1b[0m');
     this.resolveExit?.();
   }
   async pollSpotify(){
@@ -164,6 +191,7 @@ export class GeekifyGraphicsApp {
         this.trackKey=key;this.coverDataUrl='';
         void this.loadArtwork(this.track);
         void this.loadLyrics(this.track);
+        if(this.tab==='now'&&this.subtab==='queue')void this.loadQueue();
       }
       this.draw();
     }catch(error){
@@ -228,6 +256,11 @@ export class GeekifyGraphicsApp {
     if(tab==='now')this.subtab='lyrics';
     this.playlist=null;this.draw();
     if(tab!=='now'&&tab!=='settings')await this.loadList();
+  }
+  async changeSubtab(subtab){
+    if(!['lyrics','queue','info'].includes(subtab))return;
+    this.subtab=subtab;this.draw();
+    if(subtab==='queue')await this.loadQueue();
   }
   async loadList(offset=this.listOffset){
     if(this.demo){this.list=[];this.listTotal=0;this.draw();return;}
@@ -299,7 +332,9 @@ export class GeekifyGraphicsApp {
       items,selected:this.selected-this.scrollStart,
       offset:this.listOffset+this.scrollStart,
       loading:this.loading,query:this.query,searchActive:this.searchActive,
-      playlistName:this.playlist?.name
+      playlistName:this.playlist?.name,
+      queueItems:this.queue.map(item=>({title:item.title,subtitle:item.artist})),
+      queueLoading:this.queueLoading,queueNotice:this.queueNotice
     };
   }
   async draw(){
@@ -308,8 +343,12 @@ export class GeekifyGraphicsApp {
     this.drawing=true;
     try{
       const state=this.renderState();
-      const svg=sceneSvg(state,this.assets);
       const cols=Math.max(48,stdout.columns||100),rows=Math.max(16,stdout.rows||32);
+      // Re-encoding the same large image every 650ms is unnecessary, especially paused.
+      const frameKey=JSON.stringify({...state,progressMs:Math.floor(state.progressMs/1000),
+        coverDataUrl:this.coverDataUrl.length,columns:cols,rows});
+      if(frameKey===this.lastFrameKey)return;
+      const svg=sceneSvg(state,this.assets);
       // Letterbox the 16:9 illustrated UI inside arbitrary terminal panes.
       const layout=terminalSceneLayout(cols,rows);
       this.imageLayout=layout;
@@ -332,10 +371,11 @@ export class GeekifyGraphicsApp {
       }else{
         stdout.write(ESC+'H'+encodeInlineImage(png,cols,rows));
       }
+      this.lastFrameKey=frameKey;
     }catch(error){
       // Do not leave the terminal stuck in mouse/alternate-screen mode.
       this.quit();
-      process.stderr.write('\nRen renderer failed: '+safeError(error)+'\n');
+      process.stderr.write('\nGeekify graphics renderer failed: '+safeError(error)+'\n');
     }finally{
       this.drawing=false;
       if(this.pending&&this.running){this.pending=false;void this.draw();}
@@ -361,7 +401,8 @@ export class GeekifyGraphicsApp {
     if(!hit)return;
     if(hit.type==='tab'){await this.changeTab(hit.value);return;}
     if(hit.type==='play'){await this.togglePlayback();return;}
-    if(['lyrics','queue','info'].includes(hit.type)){this.subtab=hit.type;this.draw();return;}
+    if(hit.type==='seek'){await this.seekTo(hit.ratio);return;}
+    if(['lyrics','queue','info'].includes(hit.type)){await this.changeSubtab(hit.type);return;}
     if(hit.type==='shuffle'&&!this.demo){await this.action(()=>this.api.shuffle(!this.playback?.shuffle_state,this.deviceId()));return;}
     if(hit.type==='repeat'&&!this.demo){await this.cycleRepeat();return;}
     if(hit.type==='heart'&&!this.demo&&this.track?.uri){await this.action(()=>this.api.save(this.track.uri));return;}
@@ -397,6 +438,11 @@ export class GeekifyGraphicsApp {
     }
     if(/^[1-6]$/.test(input)){await this.changeTab(TABS[Number(input)-1]);return;}
     if(input==='q'){this.quit();return;}
+    if(input==='\t'&&this.tab==='now'){
+      const views=['lyrics','queue','info'];
+      await this.changeSubtab(views[(views.indexOf(this.subtab)+1)%views.length]);return;
+    }
+    if(input==='u'&&this.tab==='now'&&this.subtab==='queue'){await this.loadQueue();return;}
     if(input==='/'){this.searchActive=true;this.query='';this.draw();return;}
     if(input===' '){await this.togglePlayback();return;}
     if(input==='n'){await this.skip(1);return;}
@@ -405,6 +451,6 @@ export class GeekifyGraphicsApp {
     if(input==='r'&&!this.demo){await this.cycleRepeat();return;}
     if(input==='s'&&!this.demo){await this.action(()=>this.api.shuffle(!this.playback?.shuffle_state,this.deviceId()));return;}
     if(input==='f'&&!this.demo&&this.track?.uri){await this.action(()=>this.api.save(this.track.uri));return;}
-    if(input==='?')this.say('1-6 tabs • / search • Space play • n/p skip • s shuffle • r repeat • f like • q quit',8);
+    if(input==='?')this.say('1-6 tabs • Tab lyrics/queue/info • U queue refresh • / search • Space play • n/p skip • q quit',8);
   }
 }

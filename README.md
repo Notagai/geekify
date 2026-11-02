@@ -28,7 +28,7 @@ geekify --graphics     # Force graphical mode
 geekify graphics-check
 ```
 
-Use Space to play/pause, n/p to skip, 1–6 for the left sidebar, / to search, arrows and Enter to browse, s/r for shuffle/repeat, f to save, and q to quit. Spotify controls actual audio playback externally. Missing lyrics are indicated rather than fabricated. Mascot reactions to genre, BPM, and musical key are reserved for later once appropriate track data sources and sprites exist.
+Use Space to play/pause, n/p to skip, 1–6 for the left sidebar, Tab to switch Lyrics/Queue/Info, U to refresh Queue, / to search, arrows and Enter to browse, s/r for shuffle/repeat, f to save, and q to quit. Click the bottom progress bar to seek within the song. Queue uses Spotify's live queue endpoint and may be restricted by Spotify API permissions. Spotify controls actual audio playback externally. Missing lyrics are indicated rather than fabricated. Mascot reactions to genre, BPM, and musical key are reserved for later once appropriate track data sources and sprites exist.
 
 ## Quick start: launch Geekify from anywhere
 
@@ -91,6 +91,9 @@ Spotify's developer API may restrict playlist contents when you don't own or col
 | Enter | Play selected track / open playlist / switch device |
 | PgUp / PgDn | Change catalog page |
 | Space | Play or pause |
+| Tab | Cycle Lyrics, Queue and Info in the graphical Now Playing view |
+| U | Refresh the live Queue tab in the graphical player |
+| Mouse click on progress | Seek within the current track in the graphical player |
 | n / p | Next / previous track |
 | + / - | Change volume |
 | s / r | Toggle shuffle / cycle repeat |

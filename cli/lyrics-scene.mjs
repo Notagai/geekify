@@ -19,9 +19,14 @@ const HIT={
 export function hitTest(x,y,tab='now'){
   for(let i=0;i<TABS.length;i++)if(x>=45&&x<=237&&y>=135+i*48&&y<=178+i*48)return {type:'tab',value:TABS[i]};
   if(tab==='now'){
+    // Seek bar is independent of the playback buttons and uses actual artwork bounds.
+    if(x>=246&&x<=629&&y>=603&&y<=640){
+      return {type:'seek',ratio:Math.max(0,Math.min(1,(x-247)/380))};
+    }
     for(const [type,h] of Object.entries(HIT))if(x>=h.x&&x<h.x+h.w&&y>=h.y&&y<h.y+h.h)return {type};
-  }else if(x>=296&&x<1129&&y>=171&&y<511){
-    const index=Math.floor((y-171)/37);
+  }else if(x>=319&&x<1129&&y>=188&&y<476){
+    // List baselines are 214, 246, 278...; nine 32px rows.
+    const index=Math.floor((y-188)/32);
     if(index>=0&&index<9)return {type:'item',index};
   }
   return null;
@@ -76,9 +81,18 @@ function lyricMarkup(state){
     return s;
   }
   if(state.subtab==='queue'){
-    return text(340,190,'UP NEXT',26,'#70442b',800)+
-      text(340,253,'Your Spotify queue is managed by Spotify.',18,'#78523a')+
-      text(340,291,'The track controls remain below.',17,'#987a61');
+    let s=text(340,181,'UP NEXT',24,'#70442b',800);
+    if(state.queueLoading)return s+text(340,250,'Loading your Spotify queue…',20,'#78523a');
+    const queued=state.queueItems||[];
+    if(!queued.length)return s+text(340,250,shorten(state.queueNotice||'Your queue is empty.',64),18,'#78523a')
+      +text(340,288,'Press U to refresh.',16,'#987a61');
+    queued.slice(0,7).forEach((item,i)=>{
+      const y=219+i*40;
+      s+=text(340,y,String(i+1).padStart(2,'0'),16,'#a77a54');
+      s+=text(399,y,shorten(item.title,36),19,'#4e3022',650);
+      s+=text(973,y,shorten(item.subtitle,18),14,'#8e6b54');
+    });
+    return s+text(1092,493,'U refresh',14,'#987a61',500,'end');
   }
   const prev=state.lyricsPrev||[],current=state.lyricsCurrent||[],next=state.lyricsNext||[];
   if(!prev.length&&!current.length&&!next.length){
@@ -104,6 +118,7 @@ function lyricMarkup(state){
   }
   // Scroll thumb from the independently cropped pixel-art UI pack.
   s+=A(state.assets,'frame/edge-right',1131,176,8,222);
+  if(state.lyricsStatus==='plain')s+=text(1095,474,'UNSYNCED LYRICS',14,'#997158',650,'end');
   return s;
 }
 function listMarkup(state){
@@ -172,7 +187,13 @@ export function sceneSvg(state={},assets={}){
   }else s+=listMarkup(st);
   s+=A(assets,'decor/tape',1018,85,115,68);
   s+=player(st,assets);
-  s+=text(886,52,'● Spotify',16,'#efdfc0',650);
+  if(st.status){
+    // Errors and control feedback must be visible, not silently stored in state.
+    s+=rect(531,24,596,40,'#f1c79b',5);
+    s+=text(549,50,shorten(st.status,69),17,'#57301d',700);
+  }else{
+    s+=text(886,52,st.demo?'● Demo':'● Spotify',16,'#efdfc0',650);
+  }
   if(st.searchActive){
     // A soft torn-note highlight over the fixed background; content remains live.
     s+=A(assets,'paper/tab-active',306,209,679,76);
