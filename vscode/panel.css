@@ -232,7 +232,7 @@ button:focus-visible,input:focus-visible,[role="slider"]:focus-visible{outline:3
   .decor-photo{width:76px;height:53px;margin-left:0;background-position:center -5px}
   .parchment{flex:1;min-height:0;padding:16px 26px 12px}
   .parchment::before{
-    background-size:256px 36px,24px 256px,18px 256px,384px 94px,256px 34px;
+    background-size:256px 36px,24px 256px,18px 256px,278px 94px,256px 34px;
   }
   .paper-content{padding-bottom:76px}
   .paper-tabs{min-height:37px;padding-bottom:5px;gap:5px}
@@ -282,6 +282,6 @@ button:focus-visible,input:focus-visible,[role="slider"]:focus-visible{outline:3
   .transport-primary{height:34px}
   .paper-content{font-size:13px;padding-bottom:56px}
   .parchment::before{
-    background-size:256px 36px,24px 256px,18px 256px,384px 70px,256px 34px;
+    background-size:256px 36px,24px 256px,18px 256px,207px 70px,256px 34px;
   }
 }
