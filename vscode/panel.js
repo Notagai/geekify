@@ -53,7 +53,12 @@ const tokens=new Map();
 // Every region sizes to the real webview. A narrow editor stacks the sidebar,
 // parchment and transport controls; no more 1200px canvas scaled to a stamp.
 board.style.setProperty('--wood-image','url("'+assets['frame/wood-tile']+'")');
-board.style.setProperty('--parchment-image','url("'+assets['paper/lyrics-panel']+'")');
+board.style.setProperty('--paper-tile-image','url("'+assets['paper/grain-tile']+'")');
+board.style.setProperty('--paper-top-image','url("'+assets['paper/torn-top']+'")');
+board.style.setProperty('--paper-bottom-image','url("'+assets['paper/torn-bottom']+'")');
+board.style.setProperty('--paper-left-image','url("'+assets['paper/worn-left']+'")');
+board.style.setProperty('--paper-right-image','url("'+assets['paper/worn-right']+'")');
+board.style.setProperty('--forest-image','url("'+assets['paper/forest-edge']+'")');
 board.style.setProperty('--player-image','url("'+assets['paper/player-panel']+'")');
 board.style.setProperty('--idle-image','url("'+assets['sidebar/button-idle']+'")');
 board.style.setProperty('--active-image','url("'+assets['sidebar/button-active']+'")');
