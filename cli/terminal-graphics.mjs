@@ -19,7 +19,8 @@ export function preferredGraphicsProtocol(env=process.env){
 
 // A query probe avoids emitting hundreds of kilobytes of invisible escapes when
 // the VS Code setting terminal.integrated.enableImages is disabled.
-// A primary-device-attributes reply is used as the unsupported signal, per Kitty spec.
+// Some terminals answer the device-attributes query before responding to Kitty.
+// Continue to wait briefly so an early DA response cannot mask working graphics.
 export async function probeKittyGraphics({input=stdin,output=stdout,timeoutMs=950}={}){
   if(!input.isTTY||!output.isTTY||typeof input.setRawMode!=='function')return false;
   const wasRaw=Boolean(input.isRaw);
@@ -42,7 +43,9 @@ export async function probeKittyGraphics({input=stdin,output=stdout,timeoutMs=95
       collected+=chunk.toString('utf8');
       if(collected.length>5000)collected=collected.slice(-5000);
       if(collected.includes(APC+'i='+probeId+';OK'+ST)){finish(true);return;}
-      if(/\x1b\[\??[0-9;]*c/.test(collected)){finish(false);}
+      if(collected.includes(APC+'i='+probeId+';ERR')){finish(false);return;}
+      // Do not treat an early CSI c device-attributes reply as a graphics failure.
+      // Kitty replies can arrive asynchronously after that reply.
     };
     input.on('data',onData);
     timeout=setTimeout(()=>finish(false),clamp(timeoutMs,100,5000));
