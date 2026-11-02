@@ -5,6 +5,7 @@ import { SpotifyApi, trackInfo } from './spotify.mjs';
 import { lookupLyrics, lyricIndex } from '../src/lyrics.js';
 import { demoCover, loadSpotifyCover, coverToAnsiRows } from './cover.mjs';
 import { renderWoodUI, paperWidth } from './wood-theme.mjs';
+import { renRows } from './ren-sprite.mjs';
 
 const ESC='\x1b[';
 const CODE={reset:'\x1b[0m',base:'\x1b[38;2;224;220;238m',muted:'\x1b[38;2;145;141;171m',
@@ -38,7 +39,8 @@ const itemLabel=item=>{
   return t?t.title+'   /   '+t.artist:'Unavailable track';
 };
 export class GeekifyTui {
-  constructor({demo=false}={}){
+  constructor({demo=false,mascot=null}={}){
+    this.mascot=mascot;
     this.api=new SpotifyApi();
     this.demo=demo||!isConnected();
     this.tab='now';this.playing=false;this.current=this.demo?DEMO_TRACK:null;
@@ -368,6 +370,13 @@ export class GeekifyTui {
     const now=this.playbackPosition(),duration=track.durationMs||0;
     const barSize=Math.max(8,Math.min(32,inner-25));
     const filled=Math.min(barSize,Math.max(0,Math.round(barSize*(duration?now/duration:0))));
+    if(this.mascot==='ren' && height>=24 && inner>=44){
+      // Anchor the sprite above the right end of the progress bar.
+      // Animation is frame-based and deliberately independent of Spotify audio.
+      const frame=this.playing?Math.floor(performance.now()/450)%2:0;
+      const offset=Math.min(inner-12,Math.max(0,2+clock(now).length+3+barSize-12));
+      for(const spriteRow of renRows(frame))lines.push({spriteRow,spriteOffset:offset});
+    }
     this.put(lines,'  '+clock(now)+'   '+'━'.repeat(filled)+'─'.repeat(barSize-filled)+'   '+clock(duration),'pink');
     this.put(lines,'  ────  L Y R I C S  ────','violet');
     if(this.demo){
