@@ -7,27 +7,203 @@ const board=document.getElementById('board');
 const status=document.getElementById('audioStatus');
 const listen=document.getElementById('listenHere');
 const NS='http://www.w3.org/2000/svg';
-const icons={
- now:'<rect x="4" y="5" width="16" height="14" rx="1"/><path d="M10 9l6 3-6 3z" fill="currentColor" stroke="none"/>',
- search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/>',
- library:'<path d="M3 4h7v16H3zM12 4h8v16h-8zM5 8h3M14 8h4M5 16h3M14 16h4"/>',
- playlists:'<path d="M4 6h3M10 6h11M4 12h3M10 12h11M4 18h3M10 18h11"/>',
- devices:'<rect x="3" y="4" width="14" height="12" rx="1"/><path d="M7 20h11M11 16v4M19 7h2v12h-6v-2"/>',
- settings:'<path d="M9 2h6l1 3 3 1 2 5-2 2 1 3-5 4-3-1-3 1-4-4 1-3-2-2 2-5 3-1z"/><circle cx="12" cy="11" r="3"/>',
- shuffle:'<path d="M3 7h3c4 0 7 10 11 10h4m-4-3 4 3-4 3M3 17h3c2 0 3-2 4-4m4-4c1-2 2-2 4-2h3m-4-3 4 3-4 3"/>',
- previous:'<path d="M5 5v14M18 5l-11 7 11 7z" fill="currentColor" stroke="none"/>',
- pause:'<path d="M7 5h4v14H7zM15 5h4v14h-4z" fill="currentColor" stroke="none"/>',
- play:'<path d="M7 4l13 8-13 8z" fill="currentColor" stroke="none"/>',
- next:'<path d="M19 5v14M6 5l11 7-11 7z" fill="currentColor" stroke="none"/>',
- repeat:'<path d="M4 9V7a3 3 0 0 1 3-3h12l-3-3m3 3-3 3M20 15v2a3 3 0 0 1-3 3H5l3 3m-3-3 3-3"/>',
- heart:'<path d="M12 21 3 12C-1 7 5 1 10 6l2 2 2-2c5-5 11 1 7 6z"/>'
+// Native 16x16 pixel masks. Every mark is a filled grid square, not an
+// antialiased outline or an incomplete cut from the generated sprite sheet.
+const pixelGlyphs={
+  brand:[
+    '.....######.....',
+    '....##....##....',
+    '...##......##...',
+    '..##........##..',
+    '..##........##..',
+    '..##........##..',
+    '.###........###.',
+    '.###........###.',
+    '.###........###.',
+    '..##........##..',
+    '................'
+  ],
+  now:[
+    '................',
+    '..######........',
+    '.###########....',
+    '.##........##...',
+    '.##....#...##...',
+    '.##....###.##...',
+    '.##....####.#...',
+    '.##....###.##...',
+    '.##....#...##...',
+    '.##........##...',
+    '.############...',
+    '..##########....'
+  ],
+  search:[
+    '....######......',
+    '...##....##.....',
+    '..##......##....',
+    '..##......##....',
+    '..##......##....',
+    '...##....##.....',
+    '....######......',
+    '.........##.....',
+    '..........##....',
+    '...........##...',
+    '............##..',
+    '.............##.'
+  ],
+  library:[
+    '................',
+    '..####.####.##..',
+    '..##.#.##.#.##..',
+    '..##.#.##.#.##..',
+    '..##.#.##.#.##..',
+    '..##.#.##.#.##..',
+    '..##.#.##.#.##..',
+    '..##.#.##.#.##..',
+    '..##.#.##.#.##..',
+    '..##.#.##.#.##..',
+    '..####.####.##..',
+    '..############..'
+  ],
+  playlists:[
+    '................',
+    '..##..########..',
+    '..##..########..',
+    '................',
+    '..##..########..',
+    '..##..########..',
+    '................',
+    '..##..########..',
+    '..##..########..',
+    '................',
+    '..##..########..',
+    '..##..########..'
+  ],
+  devices:[
+    '.#########......',
+    '.##.....##.####.',
+    '.##.....##.##.#.',
+    '.##.....##.##.#.',
+    '.##.....##.##.#.',
+    '.##.....##.##.#.',
+    '.##.....##.##.#.',
+    '.#########.##.#.',
+    '....##.....##.#.',
+    '..######...####.',
+    '................'
+  ],
+  settings:[
+    '.....#####......',
+    '..##.#####.##...',
+    '..###########...',
+    '.####.....####..',
+    '.###..###..###..',
+    '.###..#.#..###..',
+    '.###..###..###..',
+    '.####.....####..',
+    '..###########...',
+    '..##.#####.##...',
+    '.....#####......'
+  ],
+  shuffle:[
+    '.###........##..',
+    '.#####....####..',
+    '.....##.##......',
+    '......###.......',
+    '......###.......',
+    '.....##.##......',
+    '.#####....####..',
+    '.###........##..'
+  ],
+  previous:[
+    '.###............',
+    '.###.......##...',
+    '.###......###...',
+    '.###....#####...',
+    '.###..#######...',
+    '.###....#####...',
+    '.###......###...',
+    '.###.......##...'
+  ],
+  pause:[
+    '..####....####..',
+    '..####....####..',
+    '..####....####..',
+    '..####....####..',
+    '..####....####..',
+    '..####....####..',
+    '..####....####..',
+    '..####....####..'
+  ],
+  play:[
+    '..###...........',
+    '..#####.........',
+    '..#######.......',
+    '..#########.....',
+    '..###########...',
+    '..#########.....',
+    '..#######.......',
+    '..#####.........',
+    '..###...........'
+  ],
+  next:[
+    '............###.',
+    '...##.......###.',
+    '...###......###.',
+    '...#####....###.',
+    '...#######..###.',
+    '...#####....###.',
+    '...###......###.',
+    '...##.......###.'
+  ],
+  repeat:[
+    '....########....',
+    '..###......##...',
+    '.##........##...',
+    '.##........####.',
+    '.##..........##.',
+    '.##........####.',
+    '.##........##...',
+    '..###......##...',
+    '....########....'
+  ],
+  heart:[
+    '..####....####..',
+    '.######..######.',
+    '################',
+    '################',
+    '.##############.',
+    '..############..',
+    '...##########...',
+    '....########....',
+    '.....######.....',
+    '......####......',
+    '.......##.......'
+  ]
 };
 function icon(name){
   const svg=document.createElementNS(NS,'svg');
-  svg.setAttribute('viewBox','0 0 24 24');
+  svg.setAttribute('viewBox','0 0 16 16');
   svg.setAttribute('aria-hidden','true');
   svg.classList.add('pixel-icon');
-  svg.innerHTML=icons[name]||icons.now;
+  const rows=pixelGlyphs[name]||pixelGlyphs.now;
+  // Center each sprite vertically; coalesce horizontal runs into exact rectangles.
+  const yOffset=Math.floor((16-rows.length)/2);
+  for(let y=0;y<rows.length;y++){
+    const line=rows[y];
+    for(let x=0;x<Math.min(16,line.length);){
+      if(line[x]!=='#'){x++;continue;}
+      let end=x+1;
+      while(end<16&&line[end]==='#')end++;
+      const pixel=document.createElementNS(NS,'rect');
+      pixel.setAttribute('x',String(x));
+      pixel.setAttribute('y',String(y+yOffset));
+      pixel.setAttribute('width',String(end-x));
+      pixel.setAttribute('height','1');
+      svg.append(pixel);
+      x=end;
+    }
+  }
   return svg;
 }
 function make(tag,cls,parent,text){
@@ -61,14 +237,17 @@ board.style.setProperty('--paper-right-image','url("'+assets['paper/worn-right']
 board.style.setProperty('--forest-image','url("'+assets['paper/forest-edge']+'")');
 board.style.setProperty('--player-image','url("'+assets['paper/player-panel']+'")');
 board.style.setProperty('--idle-image','url("'+assets['sidebar/button-idle']+'")');
-board.style.setProperty('--active-image','url("'+assets['sidebar/button-active']+'")');
+// Do not use sidebar/button-active.png: its source contains a cropped corner.
+board.style.setProperty('--brand-vine-image','url("'+assets['branding/ivy-corner']+'")');
 board.style.setProperty('--flowers-image','url("'+assets['decor/flowers']+'")');
 board.style.setProperty('--polaroid-image','url("'+assets['decor/polaroid']+'")');
 const frame=make('div','desk',board);
 const header=make('header','desk-header',frame);
 const brand=make('div','brand-mark',header);
-brand.append(icon('now'));
-make('span','brand-label',brand,'geekify.');
+make('span','brand-vine',brand).setAttribute('aria-hidden','true');
+const brandBadge=make('div','brand-badge',brand);
+brandBadge.append(icon('brand'));
+make('span','brand-label',brandBadge,'geekify.');
 const connection=make('span','connection',header,'● Spotify');
 const workspace=make('div','workspace',frame);
 const sidebar=make('aside','sidebar',workspace);
