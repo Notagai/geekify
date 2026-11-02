@@ -26,7 +26,7 @@ function writeStatus(phase,detail=''){
     const dir=join(homedir(),'.geekify');
     mkdirSync(dir,{recursive:true,mode:0o700});
     writeFileSync(join(dir,'extension-status.json'),JSON.stringify({
-      version:'0.4.6',phase,detail:detail.slice(0,180),updatedAt:Date.now()
+      version:'0.4.7',phase,detail:detail.slice(0,180),updatedAt:Date.now()
     }),{encoding:'utf8',mode:0o600});
   }catch{}
 }
