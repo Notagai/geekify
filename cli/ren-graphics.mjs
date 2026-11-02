@@ -7,6 +7,7 @@ import { isConnected } from './auth.mjs';
 import { loadSpotifyCover } from './cover.mjs';
 import { lookupLyrics, lyricIndex } from '../src/lyrics.js';
 import { sceneSvg, hitTest, NAV, SCENE_WIDTH, SCENE_HEIGHT } from './ren-scene.mjs';
+import { preferredGraphicsProtocol, probeKittyGraphics, encodeInlineImage, encodeKittyImage, kittyDeleteImage } from './terminal-graphics.mjs';
 
 const ESC='\x1b[';
 const DEMO_TRACK={id:'ren-demo',uri:null,title:'Midnight Frequency',artist:'geekify sessions',
@@ -22,20 +23,13 @@ const DEMO_LINES=[
   {timeMs:115000,text:'the night goes on'}
 ];
 const safeError=error=>String(error?.message||error).replace(/[\x00-\x1f\x7f-\x9f]/g,' ').slice(0,112);
-export const supportsInlineImages=(env=process.env)=>Boolean(
-  env.WEZTERM_PANE||/wezterm|iterm/i.test(env.TERM_PROGRAM||'')||env.GEEKIFY_FORCE_IMAGES==='1'
-);
-export function encodeInlineImage(buffer,columns,rows){
-  if(!Buffer.isBuffer(buffer))throw new TypeError('Expected a PNG Buffer');
-  const w=Math.max(1,Math.min(500,Math.floor(columns)));
-  const h=Math.max(1,Math.min(200,Math.floor(rows)));
-  return '\x1b]1337;File=inline=1;size='+buffer.length+';width='+w+';height='+h+
-    ';preserveAspectRatio=0;doNotMoveCursor=1:'+buffer.toString('base64')+'\x07';
-}
+export { encodeInlineImage } from './terminal-graphics.mjs';
+export const supportsInlineImages=env=>preferredGraphicsProtocol(env)!=='ansi'||env?.GEEKIFY_FORCE_IMAGES==='1';
 export class RenGraphicsApp {
   constructor({demo=false,forceImages=false}={}){
     this.demo=demo||!isConnected();
     this.forceImages=forceImages;
+    this.protocol='ansi';this.lastImageId=0;this.frameSequence=0;
     this.api=new SpotifyApi();
     this.track=this.demo?DEMO_TRACK:null;
     this.playing=false;
@@ -75,10 +69,17 @@ export class RenGraphicsApp {
   }
   async run(){
     if(!stdin.isTTY||!stdout.isTTY)throw new Error('Ren graphics mode needs an interactive terminal.');
-    if(!this.forceImages&&!supportsInlineImages()){
-      throw new Error('High-detail Ren needs WezTerm (or a compatible image terminal). '+
-        'Open WezTerm and run geekify --ren. For VS Code with terminal.integrated.enableImages enabled, '+
-        'use geekify --ren --force-images. For ANSI fallback use geekify --ren-ansi.');
+    this.protocol=preferredGraphicsProtocol();
+    if(this.forceImages&&this.protocol==='ansi')this.protocol='kitty';
+    if(this.protocol==='ansi')throw new Error('This terminal has no detected image protocol. ' +
+      'Inside VS Code, enable terminal.integrated.enableImages and run geekify --ren. ' +
+      'For a text fallback, use geekify --ren-ansi.');
+    if(this.protocol==='kitty'&&!this.forceImages){
+      const supported=await probeKittyGraphics({input:stdin,output:stdout});
+      if(!supported)throw new Error('VS Code graphics are disabled or unavailable. Set ' +
+        'terminal.integrated.enableImages=true and terminal.integrated.gpuAcceleration=auto. ' +
+        'On Windows, also set terminal.integrated.windowsUseConptyDll=true. ' +
+        'Restart the terminal. Use --force-images to skip the check.');
     }
     this.running=true;
     this.enter();
@@ -260,12 +261,23 @@ export class RenGraphicsApp {
     try{
       const state=this.renderState();
       const svg=sceneSvg(state);
+      const cols=Math.max(48,stdout.columns||100),rows=Math.max(16,stdout.rows||32);
+      // Match the frame's aspect to the terminal's cell rectangle so the image
+      // occupies the whole pane and the mouse hotspots remain aligned.
+      const pixelWidth=Math.min(2300,cols*9),pixelHeight=Math.min(1500,rows*18);
       const png=await sharp(Buffer.from(svg),{limitInputPixels:2000000})
+        .resize(pixelWidth,pixelHeight,{fit:'fill',kernel:'nearest'})
         .png({compressionLevel:6}).toBuffer();
       if(!this.running)return;
-      const cols=Math.max(48,stdout.columns||100),rows=Math.max(16,stdout.rows||32);
-      // Replace the entire image in the same cells, without pushing scrollback.
-      stdout.write(ESC+'H'+encodeInlineImage(png,cols,rows));
+      if(this.protocol==='kitty'){
+        const imageId=938201+(this.frameSequence++%2);
+        const encoded=encodeKittyImage(png,{columns:cols,rows,imageId});
+        const cleanup=this.lastImageId?kittyDeleteImage(this.lastImageId):'';
+        this.lastImageId=imageId;
+        stdout.write(ESC+'H'+encoded+cleanup);
+      }else{
+        stdout.write(ESC+'H'+encodeInlineImage(png,cols,rows));
+      }
     }catch(error){
       // Do not leave the terminal stuck in mouse/alternate-screen mode.
       this.quit();
