@@ -81,3 +81,17 @@ export function runExecutable(executable,args=[],options={}){
 export function runVsCode(args,options={}){
   return runExecutable(resolveVsCodeCommand(),args,options);
 }
+
+export function runNpm(args,options={}){
+  if(process.platform==='win32'){
+    // Node's own npm entrypoint bypasses any shadowed/broken npm.cmd on PATH.
+    const npmCli=join(dirname(process.execPath),'node_modules','npm','bin','npm-cli.js');
+    if(existsSync(npmCli)){
+      return spawnSync(process.execPath,[npmCli,...args],{
+        windowsHide:true,encoding:'utf8',timeout:180000,
+        ...options,shell:false
+      });
+    }
+  }
+  return runExecutable(process.platform==='win32'?'npm.cmd':'npm',args,options);
+}
