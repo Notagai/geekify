@@ -28,7 +28,7 @@ button:focus-visible,input:focus-visible,[role="slider"]:focus-visible{outline:3
 .brand-mark{position:relative;display:flex;align-items:center;flex:none;min-width:0;isolation:isolate}
 .brand-vine{
   position:absolute;z-index:3;pointer-events:none;
-  left:-22px;top:-22px;width:97px;height:80px;
+  left:-13px;top:-17px;width:97px;height:80px;
   background-image:var(--brand-vine-image);
   background-repeat:no-repeat;background-size:100% 100%;
   image-rendering:pixelated;filter:drop-shadow(2px 2px 0 #2c2817)
@@ -236,7 +236,7 @@ button:focus-visible,input:focus-visible,[role="slider"]:focus-visible{outline:3
   .desk-header{min-height:52px}
   .brand-badge{font-size:20px;padding:7px 11px 7px 18px;gap:6px;min-height:45px;border-width:3px}
   .brand-badge .pixel-icon{width:21px;height:21px}
-  .brand-vine{width:75px;height:65px;left:-17px;top:-19px}
+  .brand-vine{width:75px;height:65px;left:-10px;top:-10px}
   .connection{font-size:11px;padding:7px;min-width:0}
   .workspace{display:flex;flex-direction:column;gap:8px}
   .sidebar{flex:none;display:block}
@@ -289,7 +289,7 @@ button:focus-visible,input:focus-visible,[role="slider"]:focus-visible{outline:3
 @media(max-width:400px){
   .brand-badge{font-size:16px;min-height:37px;padding:5px 8px 5px 13px;gap:5px}
   .brand-badge .pixel-icon{width:18px;height:18px}
-  .brand-vine{width:58px;height:48px;left:-13px;top:-14px}
+  .brand-vine{width:58px;height:48px;left:-8px;top:-8px}
   .nav-item{font-size:10px;grid-template-columns:13px minmax(0,1fr);column-gap:4px;padding:4px 6px}
   .nav-item .pixel-icon{width:13px;height:13px}
   .transport-controls{gap:5px}
@@ -301,7 +301,7 @@ button:focus-visible,input:focus-visible,[role="slider"]:focus-visible{outline:3
   .desk-header{min-height:40px}
   .brand-badge{font-size:17px;min-height:35px;padding:4px 8px 4px 15px}
   .brand-badge .pixel-icon{height:18px;width:18px}
-  .brand-vine{width:60px;height:50px;left:-14px;top:-14px}
+  .brand-vine{width:60px;height:50px;left:-8px;top:-5px}
   .sidebar-nav{gap:4px}
   .nav-item{min-height:31px;height:31px}
   .player-panel{min-height:117px;padding:8px 13px}
