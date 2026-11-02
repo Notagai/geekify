@@ -16,6 +16,9 @@ jobs:
       - run: npm test
       - run: npm run cli:smoke
       - run: node --check cli/ui.mjs
+      - run: node --check cli/lyrics-scene.mjs
+      - run: node --check cli/graphics-app.mjs
+      - run: node --check cli/terminal-graphics.mjs
       - run: node --check cli/auth.mjs
       - run: node --check cli/spotify.mjs
       - run: npm run build
