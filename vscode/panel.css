@@ -75,22 +75,26 @@ button:focus-visible,input:focus-visible,[role="slider"]:focus-visible{outline:3
 }
 .parchment{
   position:relative;min-width:0;min-height:0;display:flex;flex-direction:column;
-  padding:23px clamp(17px,2.7vw,39px) 22px;
-  overflow:hidden;
-  background:#f0cda5;box-shadow:7px 8px 0 #30190eaa;
-  border:4px solid #8e5635;
-  border-radius:9px 13px 12px 8px;
+  padding:clamp(23px,2.3vw,34px) clamp(25px,3vw,46px) 19px;
+  overflow:hidden;border:0;border-radius:6px 10px 8px 5px;
+  background-color:#f5d9b3;
+  /* Native 256px grain tile: repeat without stretching in either direction. */
+  background-image:var(--paper-tile-image);
+  background-repeat:repeat;background-position:0 0;background-size:256px 256px;
+  box-shadow:7px 8px 0 #30190eaa,inset 0 0 0 2px #a06d4b44;
 }
 .parchment::before{
-  content:"";position:absolute;inset:0;pointer-events:none;
-  background-image:var(--parchment-image);
-  background-repeat:no-repeat;background-size:100% calc(100% + 52px);
-  background-position:center bottom;opacity:.82
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  /* Independent repeatable sprites, not one stretched paper screenshot. */
+  background-image:var(--paper-top-image),var(--paper-left-image),
+    var(--paper-right-image),var(--forest-image),var(--paper-bottom-image);
+  background-repeat:repeat-x,repeat-y,repeat-y,repeat-x,repeat-x;
+  background-position:left top,left top,right top,left bottom,left bottom;
+  background-size:256px 36px,24px 256px,18px 256px,384px 130px,256px 34px;
 }
 .parchment::after{
-  content:"";position:absolute;left:6px;top:14px;bottom:15px;width:12px;pointer-events:none;
-  background:radial-gradient(circle at 50% 11px,#5a301b 0 4px,transparent 5px) 0 0/12px 72px repeat-y;
-  opacity:.8
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  box-shadow:inset 2px 0 #fdf0d5aa,inset -3px 0 #855b4055;
 }
 .paper-tabs{
   position:relative;z-index:1;display:flex;align-items:end;gap:8px;
@@ -106,7 +110,7 @@ button:focus-visible,input:focus-visible,[role="slider"]:focus-visible{outline:3
 .paper-tab.selected{background:#ffdfb2;color:#4d2a17;border-bottom-color:#ffdfb2}
 .paper-content{
   position:relative;z-index:1;flex:1;min-height:0;min-width:0;
-  color:#5c3826;padding:4px 7px 8px;
+  color:#5c3826;padding:9px 10px 102px;
   font-size:clamp(15px,1.7vw,22px);line-height:1.45;
   overflow-x:hidden;overflow-y:auto;scrollbar-color:#ab7b59 #e9c299
 }
@@ -226,7 +230,11 @@ button:focus-visible,input:focus-visible,[role="slider"]:focus-visible{outline:3
   }
   .decor-flowers{width:61px;height:51px;background-position:center -4px}
   .decor-photo{width:76px;height:53px;margin-left:0;background-position:center -5px}
-  .parchment{flex:1;min-height:0;padding:9px 14px 11px}
+  .parchment{flex:1;min-height:0;padding:16px 26px 12px}
+  .parchment::before{
+    background-size:256px 36px,24px 256px,18px 256px,384px 94px,256px 34px;
+  }
+  .paper-content{padding-bottom:76px}
   .paper-tabs{min-height:37px;padding-bottom:5px;gap:5px}
   .paper-tab{font-size:13px;min-height:29px;padding:4px 9px}
   .paper-content{font-size:15px;line-height:1.35;padding:3px 5px}
@@ -272,5 +280,8 @@ button:focus-visible,input:focus-visible,[role="slider"]:focus-visible{outline:3
   .nav-item{min-height:31px;height:31px}
   .player-panel{min-height:117px;padding:8px 13px}
   .transport-primary{height:34px}
-  .paper-content{font-size:13px}
+  .paper-content{font-size:13px;padding-bottom:56px}
+  .parchment::before{
+    background-size:256px 36px,24px 256px,18px 256px,384px 70px,256px 34px;
+  }
 }
