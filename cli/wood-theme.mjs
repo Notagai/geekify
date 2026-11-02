@@ -69,6 +69,14 @@ export function renderWoodUI({width,height,tabs,active,connected,playing,lines,s
         paper+' '.repeat(Math.max(0,inner-2-line.artWidth-Array.from(rightText).length)+1)+
         bg(palette.woodDark)+fg(palette.paperShadow)+'▌'+RESET+after(row);
     }
+    if(line?.spriteRow){
+      const offset=Math.max(0,Math.min(inner-12,line.spriteOffset||0));
+      const paper=bg(palette.paper)+fg(palette.ink);
+      const sprite=line.spriteRow;
+      const body=paper+' '.repeat(offset)+sprite+paper+' '.repeat(inner-offset-12);
+      return outside(row)+bg(palette.woodDark)+fg(palette.paperShadow)+'▐'+paper+' '+body+' '+
+        bg(palette.woodDark)+fg(palette.paperShadow)+'▌'+RESET+after(row);
+    }
     const content=line?.text||'';
     const shade=line?.color==='selected'?'selected':'base';
     return outside(row)+bg(palette.woodDark)+fg(palette.paperShadow)+'▐'+

@@ -4,6 +4,8 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { stdin, stdout } from 'node:process';
 import { GeekifyTui } from '../cli/ui.mjs';
+import { RenGraphicsApp } from '../cli/ren-graphics.mjs';
+import { preferredGraphicsProtocol, probeKittyGraphics } from '../cli/terminal-graphics.mjs';
 import { runDoctor } from '../cli/doctor.mjs';
 import { loadConfig, login, logout, redirectUri } from '../cli/auth.mjs';
 
@@ -12,6 +14,11 @@ const help=`geekify.  /  your music, in the terminal
 Usage:
   geekify               Launch the interactive Spotify-style interface
   geekify demo          Launch a no-account demo
+  geekify --ren         Launch Ren's graphical app inside VS Code terminal
+  geekify graphics-check  Check terminal graphics support before launching
+  geekify demo --ren    Preview graphical Ren without Spotify credentials
+  geekify --ren-ansi    Preview original ANSI sprite fallback
+  geekify --ren --force-images   Skip terminal image support probe
   geekify login         Connect a Spotify account using OAuth PKCE
   geekify doctor        Check scopes and Spotify Connect devices (read-only)
   geekify logout        Clear the stored Spotify session
@@ -37,12 +44,28 @@ Terminal navigation:
 
 Spotify audio is played by Spotify, not streamed into this terminal.
 `;
-const [command]=process.argv.slice(2);
+const args=process.argv.slice(2);
+const [command]=args;
+const ren=args.includes('--ren');
+const ansiRen=args.includes('--ren-ansi');
+const forceImages=args.includes('--force-images');
 async function main(){
   if(['--help','-h','help'].includes(command)){console.log(help);return;}
-  if(['--version','-v'].includes(command)){console.log('geekify 0.2.0');return;}
+  if(['--version','-v'].includes(command)){console.log('geekify 0.3.0');return;}
   if(command==='logout'){logout();console.log('Spotify session cleared.');return;}
   if(command==='doctor'){process.exitCode=await runDoctor();return;}
+  if(command==='graphics-check'){
+    const detected=preferredGraphicsProtocol();
+    console.log('Geekify graphics diagnostic');
+    console.log('Node:',process.version,'  TTY:',Boolean(stdin.isTTY&&stdout.isTTY));
+    console.log('Terminal host:',process.env.TERM_PROGRAM||'(not reported)');
+    console.log('Suggested graphics protocol:',detected);
+    const supported=detected==='iterm'?'not tested':await probeKittyGraphics();
+    console.log('Kitty graphics probe:',supported===true?'supported':supported===false?'no response / unavailable':supported);
+    console.log('VS Code: enable terminal.integrated.enableImages, gpuAcceleration=auto, and on Windows windowsUseConptyDll=true.');
+    if(supported!==true)console.log('If image support is enabled but the probe fails, test with geekify demo --ren --force-images.');
+    return;
+  }
   if(command==='login'){
     if(!stdin.isTTY)throw new Error('geekify login needs an interactive terminal.');
     const config=loadConfig();
@@ -66,9 +89,17 @@ async function main(){
     });
     return;
   }
-  if(command==='demo'||command===undefined){
-    const app=new GeekifyTui({demo:command==='demo'});
-    await app.run();
+  if(command==='demo'||command===undefined||command==='--ren'||command==='--ren-ansi'){
+    const demo=command==='demo';
+    if(ren){
+      // --ren means graphical Ren, period. An unsupported terminal must give a
+      // useful error, never silently switch to the older character UI.
+      const app=new RenGraphicsApp({demo,forceImages});
+      await app.run();
+    }else{
+      const app=new GeekifyTui({demo,mascot:ansiRen?'ren':null});
+      await app.run();
+    }
     return;
   }
   throw new Error('Unknown command "'+command+'". Use geekify --help.');
