@@ -1,9 +1,9 @@
-// Always resolve the actual installed VS Code launcher, not a shadowed "code"
-// command in the current directory. In a standard Windows installation,
-// bin/code.cmd expects ../Code.exe to exist next to its own bin directory.
+// Resolve a working VS Code CLI rather than assuming a particular install layout.
+// The Windows installer may place "code" (POSIX shell script) and "code.cmd"
+// together; always execute the explicit .cmd path, never the extensionless script.
 import {spawnSync} from 'node:child_process';
 import {existsSync} from 'node:fs';
-import {basename,dirname,isAbsolute,join,resolve} from 'node:path';
+import {basename,dirname,isAbsolute,join} from 'node:path';
 
 export function windowsCommandLine(executable,args=[]){
   const quote=value=>{
@@ -14,14 +14,28 @@ export function windowsCommandLine(executable,args=[]){
   return '"'+[executable,...args].map(quote).join(' ')+'"';
 }
 
-function isRealVSCodeLauncher(candidate){
-  if(!candidate||!isAbsolute(candidate))return false;
-  const name=basename(candidate).toLowerCase();
-  if(name!=='code.cmd'&&name!=='code-insiders.cmd')return false;
-  const parent=resolve(dirname(candidate),'..');
-  const app=name==='code-insiders.cmd'?'Code - Insiders.exe':'Code.exe';
-  return existsSync(candidate)&&existsSync(join(parent,app))&&
-    existsSync(join(parent,'resources','app','out','cli.js'));
+export function runExecutable(executable,args=[],options={}){
+  const opts={windowsHide:true,encoding:'utf8',timeout:12000,...options};
+  if(process.platform!=='win32')return spawnSync(executable,args,opts);
+  if(/\.exe$/i.test(executable))return spawnSync(executable,args,{...opts,shell:false});
+  return spawnSync(process.env.ComSpec||'cmd.exe',
+    ['/d','/v:off','/s','/c',windowsCommandLine(executable,args)],{
+      ...opts,shell:false,windowsVerbatimArguments:true
+    });
+}
+
+function isCandidate(path){
+  return isAbsolute(path)&&
+    /^(code|code-insiders)\.cmd$/i.test(basename(path))&&existsSync(path);
+}
+
+function probeVersion(path){
+  const result=runExecutable(path,['--version'],{timeout:6000});
+  const output=String(result.stdout||'');
+  return {
+    ok:!result.error&&result.status===0&&/\b\d+\.\d+\.\d+\b/.test(output),
+    error:result.error?.message||String(result.stderr||result.stdout||'Exit '+result.status).trim().slice(0,200)
+  };
 }
 
 export function resolveVsCodeCommand({env=process.env,whereOutput=null}={}){
@@ -29,22 +43,12 @@ export function resolveVsCodeCommand({env=process.env,whereOutput=null}={}){
 
   const override=String(env.GEEKIFY_VSCODE_COMMAND||'').trim();
   if(override){
-    if(isRealVSCodeLauncher(override))return override;
-    throw new Error('GEEKIFY_VSCODE_COMMAND must be the full path to a valid '+
-      'VS Code bin\\code.cmd. Received: '+override);
+    if(!isCandidate(override))throw new Error(
+      'GEEKIFY_VSCODE_COMMAND must point to an existing absolute code.cmd path: '+override);
+    const result=probeVersion(override);
+    if(result.ok)return override;
+    throw new Error('VS Code launcher at '+override+' did not pass --version: '+result.error);
   }
-
-  const candidates=[];
-  function add(path){if(path&&!candidates.includes(path))candidates.push(path);}
-  // Prefer a known actual installation, not an accidentally shadowed PATH entry.
-  const roots=[
-    env.LOCALAPPDATA&&join(env.LOCALAPPDATA,'Programs','Microsoft VS Code'),
-    env.ProgramFiles&&join(env.ProgramFiles,'Microsoft VS Code'),
-    env['ProgramFiles(x86)']&&join(env['ProgramFiles(x86)'],'Microsoft VS Code'),
-    env.ProgramW6432&&join(env.ProgramW6432,'Microsoft VS Code'),
-    env.USERPROFILE&&join(env.USERPROFILE,'AppData','Local','Programs','Microsoft VS Code')
-  ];
-  for(const root of roots)if(root)add(join(root,'bin','code.cmd'));
 
   let discovered=whereOutput;
   if(discovered===null){
@@ -53,29 +57,40 @@ export function resolveVsCodeCommand({env=process.env,whereOutput=null}={}){
     });
     discovered=lookup.status===0?lookup.stdout||'':'';
   }
+  const candidates=[];
+  const add=path=>{if(path&&!candidates.includes(path))candidates.push(path);};
+  // Known installation directories are a preference, not a proof that the
+  // corresponding Code.exe or cli.js lives at a hard-coded relative path.
+  for(const root of [
+    env.LOCALAPPDATA&&join(env.LOCALAPPDATA,'Programs','Microsoft VS Code'),
+    env.ProgramFiles&&join(env.ProgramFiles,'Microsoft VS Code'),
+    env['ProgramFiles(x86)']&&join(env['ProgramFiles(x86)'],'Microsoft VS Code'),
+    env.ProgramW6432&&join(env.ProgramW6432,'Microsoft VS Code'),
+    env.USERPROFILE&&join(env.USERPROFILE,'AppData','Local','Programs','Microsoft VS Code')
+  ])if(root)add(join(root,'bin','code.cmd'));
   for(const line of String(discovered||'').split(/\r?\n/)){
-    const item=line.trim();
-    if(item)add(item);
+    const path=line.trim();
+    if(!path)continue;
+    // If "where code" returns the extensionless POSIX wrapper first, prefer
+    // code.cmd beside it instead of invoking the POSIX wrapper via cmd.exe.
+    add(/\\code$/i.test(path)?path+'.cmd':path);
   }
-  for(const item of candidates)if(isRealVSCodeLauncher(item))return item;
-  throw new Error(
-    'Could not find a working VS Code installation. The "code" command on PATH '+
-    'may be a broken launcher (where.exe code: '+
-    String(discovered||'none').trim().replace(/\s+/g,' ').slice(0,300)+
-    '). Set GEEKIFY_VSCODE_COMMAND to the absolute path of a valid '+
-    'VS Code bin\\code.cmd, or reinstall VS Code with Add to PATH enabled.'
-  );
-}
 
-export function runExecutable(executable,args=[],options={}){
-  const opts={windowsHide:true,encoding:'utf8',timeout:12000,...options};
-  if(process.platform!=='win32')return spawnSync(executable,args,opts);
-  // Directly execute .exe programs when possible; use cmd only for .cmd files.
-  if(/\.exe$/i.test(executable))return spawnSync(executable,args,{...opts,shell:false});
-  return spawnSync(process.env.ComSpec||'cmd.exe',
-    ['/d','/v:off','/s','/c',windowsCommandLine(executable,args)],{
-      ...opts,shell:false,windowsVerbatimArguments:true
-    });
+  const failures=[];
+  for(const candidate of candidates){
+    if(!isCandidate(candidate))continue;
+    const result=probeVersion(candidate);
+    if(result.ok)return candidate;
+    failures.push(candidate+': '+result.error);
+  }
+  throw new Error(
+    'No working VS Code code.cmd launcher found. '+
+    (failures.length?'--version failed: '+failures.slice(0,2).join(' | '):
+      'Checked installation directories and where.exe code, but found no code.cmd.')+
+    ' PATH results: '+String(discovered||'none').trim().replace(/\s+/g,' ').slice(0,300)+
+    '. In PowerShell, try & "C:\\Users\\'+(env.USERNAME||'YOU')+
+    '\\AppData\\Local\\Programs\\Microsoft VS Code\\bin\\code.cmd" --version.'
+  );
 }
 
 export function runVsCode(args,options={}){
@@ -84,7 +99,6 @@ export function runVsCode(args,options={}){
 
 export function runNpm(args,options={}){
   if(process.platform==='win32'){
-    // Node's own npm entrypoint bypasses any shadowed/broken npm.cmd on PATH.
     const npmCli=join(dirname(process.execPath),'node_modules','npm','bin','npm-cli.js');
     if(existsSync(npmCli)){
       return spawnSync(process.execPath,[npmCli,...args],{
