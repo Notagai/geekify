@@ -2,13 +2,13 @@
 
 Your Spotify controller, inside the VS Code terminal. Also includes a pixel-art website designed for vibe.notagai.com.
 
-## Lyrics-first graphical music desk (default in VS Code)
+## Original Geekify pixel-art music desk
 
-The default Geekify terminal experience is now a **sprite-free lyrics player**. In a graphics-capable VS Code integrated terminal, it renders an image-based interface using Foldered's original **wood tile, active/inactive paper tabs and sticky-note skin**, Sharp and the Kitty graphics protocol. Synchronized lyrics get the main panel; track details and playback controls live in a compact bottom strip. No Ren or Reina sprite appears in this mode.
+**The approved Geekify mockup is the art direction**, not a flattened application screenshot. The terminal interface assembles 37 individually cut and cleaned original Geekify PNG assets, including an illustrated walnut frame, parchment lyrics sheet, wooden buttons, tab skins, and decorations. See [the original asset pack](assets/geekify/ASSETS.md), [approved composition](assets/geekify/reference/approved-composition.png), and [live-data assembly preview](assets/geekify/reference/assembled-preview.png).
 
-The files in `assets/foldered/*.b64` are base64-encoded copies of artwork from the owner's Foldered repository. They're decoded once at startup to PNGs; this keeps original textures without relying on an external app or browser. Labels and song information remain live, not baked into screenshots.
+Foldered is inspiration only. The runtime now uses **Geekify-specific art**, not Foldered website graphics or generic rectangular placeholder components. Lyrics always take precedence in the large center paper sheet; song info and controls live in the compact lower player. All track titles, lyrics, progress, album artwork, and labels are live content. There are **no Ren or Reina sprites in the default app**.
 
-To enable VS Code terminal image support, use VS Code 1.110+ and add the following settings to your existing user settings.json:
+The user-defined visuals work in a VS Code terminal with graphics support. Enable the following in your existing user settings.json (do not discard other settings):
 
 ```json
 {
@@ -18,20 +18,17 @@ To enable VS Code terminal image support, use VS Code 1.110+ and add the followi
 }
 ```
 
-The last setting applies to Windows. Reload VS Code and open a new integrated terminal.
+The last setting is for Windows. Reload VS Code and create a fresh terminal after changing settings.
 
 ```powershell
-geekify                 # Lyrics-first graphical UI in VS Code
-geekify demo            # No-login graphical preview
-geekify --ansi          # Original ANSI/text UI
-geekify --graphics      # Explicit image mode
-geekify graphics-check  # Diagnostic
-geekify login           # Spotify authorization
+geekify                # Original Geekify lyrics-first graphical player in VS Code
+geekify demo           # Image-based no-account mock playback
+geekify --ansi         # Explicit legacy Unicode/ANSI text UI
+geekify --graphics     # Force graphical mode
+geekify graphics-check
 ```
 
-Use Space for play/pause, n/p to skip, 1-5 for sections, / for search, arrows and Enter to browse, s/r for shuffle/repeat, f for save, and q to exit. Click the sidebar, lyrics/queue/info tabs and transport controls where supported.
-
-**Limits:** The app draws to the current terminal, not to a separate desktop window. A compatible terminal host is necessary for the full graphical experience. In terminals without detected image protocol support, the default command uses the original ANSI UI unless --graphics is specified. On VS Code we deliberately skip the unreliable Kitty capability probe and attempt graphics directly. Spotify still produces audio in the official player. Missing lyrics are reported, never fabricated.
+Use Space to play/pause, n/p to skip, 1–6 for the left sidebar, / to search, arrows and Enter to browse, s/r for shuffle/repeat, f to save, and q to quit. Spotify controls actual audio playback externally. Missing lyrics are indicated rather than fabricated. Mascot reactions to genre, BPM, and musical key are reserved for later once appropriate track data sources and sprites exist.
 
 ## Quick start: launch Geekify from anywhere
 
@@ -60,19 +57,9 @@ To launch the browser experience instead:
 
 Open http://127.0.0.1:5173/ .
 
-## The wood-and-paper terminal design
+## ANSI fallback
 
-Geekify now draws a **walnut wood-grain background with a cream paper panel** using standard 24-bit ANSI terminal colors. The look borrows Foldered's warm palette, not its folders or artwork. There are no folder shapes, and nothing launches in a separate window.
-
-The **Now Playing** view contains a pixel-rendered album cover beside the track title and artist, a progress bar, and lyrics beneath. The cover is sourced from Spotify's album-art metadata and decoded locally with the cross-platform `sharp` dependency. The image uses colored Unicode half blocks, so it works in VS Code's integrated terminal without sixel, Kitty image protocols, or a GUI. The original demo includes a generated pixel-art cover. If Spotify has no cover art or the download fails, a placeholder remains visible.
-
-To install the new album-art decoder after pulling an older clone:
-
-    npm install
-    npm link
-    geekify
-
-For the best results, expand VS Code's terminal pane to at least 80 columns by 25 rows. Geekify automatically reduces cover size and metadata when the terminal is shorter. All existing keyboard commands remain available.
+The original Unicode/ANSI interface is still available with `geekify --ansi`. The default graphical interface, when supported by the terminal, uses the actual modular Geekify PNG pack instead of coloured block-character approximations.
 
 ## Connect Spotify to the terminal UI
 
