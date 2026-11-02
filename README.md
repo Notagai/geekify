@@ -1,171 +1,69 @@
 # geekify.
 
-Your Spotify controller, inside the VS Code terminal. Also includes a pixel-art website designed for vibe.notagai.com.
+A Spotify controller with two interfaces: a **pixel-art visual panel in VS Code** and a **fast terminal-native UI**. No more streaming enormous PNG frames through the terminal.
 
-## Original Geekify pixel-art music desk
+## Quick start (Windows / VS Code)
 
-**The approved Geekify mockup is the art direction**, not a flattened application screenshot. The terminal interface assembles 37 individually cut and cleaned original Geekify PNG assets, including an illustrated walnut frame, parchment lyrics sheet, wooden buttons, tab skins, and decorations. See [the original asset pack](assets/geekify/ASSETS.md), [approved composition](assets/geekify/reference/approved-composition.png), and [live-data assembly preview](assets/geekify/reference/assembled-preview.png).
+Requires Node.js 20+, VS Code with the command-line launcher available as code, and a Spotify developer application.
 
-Foldered is inspiration only. The runtime now uses **Geekify-specific art**, not Foldered website graphics or generic rectangular placeholder components. Lyrics always take precedence in the large center paper sheet; song info and controls live in the compact lower player. All track titles, lyrics, progress, album artwork, and labels are live content. There are **no Ren or Reina sprites in the default app**.
+Open PowerShell in the cloned repository:
 
-The user-defined visuals work in a VS Code terminal with graphics support. Enable the following in your existing user settings.json (do not discard other settings):
-
-```json
-{
-  "terminal.integrated.enableImages": true,
-  "terminal.integrated.gpuAcceleration": "auto",
-  "terminal.integrated.windowsUseConptyDll": true
-}
-```
-
-The last setting is for Windows. Reload VS Code and create a fresh terminal after changing settings.
-
-```powershell
-geekify                # Original Geekify lyrics-first graphical player in VS Code
-geekify demo           # Image-based no-account mock playback
-geekify --ansi         # Explicit legacy Unicode/ANSI text UI
-geekify --graphics     # Force graphical mode
-geekify graphics-check
-```
-
-Use Space to play/pause, n/p to skip, 1–6 for the left sidebar, Tab to switch Lyrics/Queue/Info, U to refresh Queue, / to search, arrows and Enter to browse, s/r for shuffle/repeat, f to save, and q to quit. Click the bottom progress bar to seek within the song. Queue uses Spotify's live queue endpoint and may be restricted by Spotify API permissions. Spotify controls actual audio playback externally. Missing lyrics are indicated rather than fabricated. Mascot reactions to genre, BPM, and musical key are reserved for later once appropriate track data sources and sprites exist.
-
-## Quick start: launch Geekify from anywhere
-
-Requires Node.js 20 or newer.
-
-Open your VS Code terminal and run:
-
-    git clone https://github.com/Notagai/geekify.git
-    cd geekify
+    git pull origin main
     npm install
     npm link
+    npm run extension:install
 
-After **npm link** (one-time setup), open **any** VS Code terminal, even in a different project, and type:
+Reload VS Code after installing the extension. Then, from any VS Code integrated terminal:
 
-    geekify
+    geekify                 # Opens the wooden pixel-art VS Code panel
+    geekify demo            # Panel demo without Spotify
+    geekify-fast            # Fast native ANSI terminal controller
+    geekify-fast demo       # Fast no-account terminal demo
 
-This starts the interactive terminal interface. You do not need to run a web server or stay in this repository.
+**One-time extension installation is required.** If the terminal command doesn't open a panel, select **Command Palette > Geekify: Open Player**. On a new PC, install the extension there too. To install manually, run npm run extension:package, then use **Extensions > ... > Install from VSIX**.
 
-To preview without Spotify credentials:
+The CLI invokes VS Code's URI handler to reveal the extension's webview panel. Unlike the old terminal graphics mode, the panel loads the original Geekify artwork only once and updates song data with real DOM elements. It does not use the old full-screen SVG-to-PNG-to-terminal transfer loop.
 
-    geekify demo
+## Spotify authorization and audio
 
-To launch the browser experience instead:
+1. Create an application in the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard).
+2. Register the redirect URI **http://127.0.0.1:8888/callback** exactly.
+3. Run geekify login and paste your public Spotify Client ID.
+4. If you authorized Geekify previously, **run login again**. The new panel requests the additional streaming, user-read-email, user-read-private, and user-read-currently-playing scopes.
+5. Open geekify and click **Listen inside Geekify** if an in-panel Spotify playback device becomes available. Premium is required.
 
-    npm run dev
+### Can Geekify play audio without Spotify Desktop?
 
-Open http://127.0.0.1:5173/ .
+**Sometimes, but not guaranteed inside VS Code.** Geekify uses Spotify's **official Web Playback SDK** to request a local playback device inside the panel. Spotify Premium is required. Some VS Code/Electron webviews do not include the encrypted-media/DRM support this SDK needs, so the in-panel player may fail to initialize. The player shows that error rather than pretending to play. Use the **Spotify web player** button to play audio in your default browser **without installing or opening Spotify Desktop**; then Geekify can show and control the active Spotify Connect device.
 
-## ANSI fallback
+The web player still occupies a browser tab; Geekify cannot bypass Spotify's DRM or stream protected recordings directly through Node.js. No copyrighted Spotify audio plays in demo mode.
 
-The original Unicode/ANSI interface is still available with `geekify --ansi`. The default graphical interface, when supported by the terminal, uses the actual modular Geekify PNG pack instead of coloured block-character approximations.
+The Spotify Web Playback SDK cannot be used in commercial applications without Spotify's written approval. Geekify is currently a personal/development project and does not modify or synchronize Spotify audio with visual media.
 
-## Connect Spotify to the terminal UI
+## Commands
 
-1. Sign in to https://developer.spotify.com/dashboard and use a Spotify developer app.
-2. In the app settings, register this **exact redirect URI**:
-   **http://127.0.0.1:8888/callback**
-3. In the terminal, run **geekify login**.
-4. Paste the app's **Client ID** (never the client secret).
-5. Authorize in the browser. Return to the terminal and run **geekify**.
-6. Open the normal Spotify application on your computer or another device and start a song.
-
-The CLI uses browser-based OAuth Authorization Code with PKCE. It refreshes the session automatically. Spotify Premium is required for development-mode apps and playback-control endpoints; developer apps have user limits. You do not need a paid AI API.
-
-**Important:** Geekify controls the existing Spotify player. Spotify does **not** stream its audio into this terminal. The terminal isn't a replacement audio player; it is a playback manager, song browser and lyrics display.
-
-Spotify's developer API may restrict playlist contents when you don't own or collaborate on the playlist. Library, search and device availability are also subject to the app's granted scopes and current Spotify access rules.
-
-## Keyboard controls
-
-| Key | Action |
+| Command | Behavior |
 | --- | --- |
-| 1 | Now Playing and live lyrics |
-| 2 | Search results |
-| 3 | Liked tracks |
-| 4 | Playlists |
-| 5 | Spotify Connect devices |
-| / | Type and run a search |
-| Up / Down, j / k | Navigate songs or manually scroll unsynced lyrics |
-| Enter | Play selected track / open playlist / switch device |
-| PgUp / PgDn | Change catalog page |
-| Space | Play or pause |
-| Tab | Cycle Lyrics, Queue and Info in the graphical Now Playing view |
-| U | Refresh the live Queue tab in the graphical player |
-| Mouse click on progress | Seek within the current track in the graphical player |
-| n / p | Next / previous track |
-| + / - | Change volume |
-| s / r | Toggle shuffle / cycle repeat |
-| f | Save the current track to Liked Songs |
-| c | Connect or reconnect Spotify |
-| : | Enter a Geekify command |
-| Esc | Go back |
-| ? | Help |
-| q | Quit |
+| geekify | Open VS Code visual panel |
+| geekify demo | Open visual panel demo |
+| geekify-fast | Native text/ANSI terminal controller |
+| geekify-fast demo | Native terminal demo |
+| geekify login | OAuth PKCE authorization |
+| geekify logout | Clear saved session |
+| geekify doctor | Diagnose permissions and devices |
+| geekify web | Launch original browser visualizer |
+| npm run extension:package | Build local VSIX installer |
+| npm run extension:install | Package and install VS Code extension |
 
-Commands inside the interactive UI: **:connect**, **:logout**, **:demo**, **:search text**, **:refresh**, **:help**, **:quit**.
+## Terminal shortcuts
 
-CLI entry points: **geekify**, **geekify demo**, **geekify login**, **geekify logout**, **geekify doctor**, **geekify web**, **geekify --help**, **geekify --version**.
-
-## Playback controls troubleshooting
-
-If Geekify can display the current track but cannot play, pause, skip, or start a song, use:
-
-    git pull
-    geekify login
-    geekify doctor
-
-**geekify doctor** is read-only. It checks whether Spotify granted `user-modify-playback-state`, whether the player API responds, whether a playback device is active, and whether the device is marked `is_restricted`. It never prints access or refresh tokens. Older sessions may not store their granted scopes; login again to populate them.
-
-Before testing: open Spotify Desktop, start playing a song, and confirm Spotify Desktop is the active output device. Then run `geekify` and press Space to pause. If Spotify rejects the command, Geekify now reports the HTTP status, endpoint and Spotify-provided reason such as `PREMIUM_REQUIRED` or `RESTRICTION_VIOLATED` instead of a generic "denied" message.
-
-A Spotify 403 is **not automatically proof you lack Premium**. Confirm that the account you authorized is on the app's Users Management allowlist, and that the Spotify app owner has Premium. The development limit is **five distinct authorized Spotify accounts**, not five devices or five simultaneous sessions.
-
-## Lyrics: how the fix works
-
-Lyrics come from https://lrclib.net/docs without an API key. The old implementation made one strict lookup with Spotify title, album and duration and returned "no lyrics" for many songs with different single/remaster metadata.
-
-The revised lookup:
-1. Attempts an exact song + artist + album + duration match.
-2. Falls back to searching lyrics by title + artist without overconstraining album/duration.
-3. Rejects results with the wrong artist/title or a significantly different duration.
-4. Prefers synchronized, timestamped LRC.
-5. Shows plain lyrics when only unsynced text is available, clearly labeled as **unsynced**.
-6. Does not pretend lyrics exist if the provider has none.
-
-The lyrics' current line is derived from Spotify's approximate playback position. Spotify polling and network latency can still lead to some drift. The app cannot guarantee lyrics for all songs. No copyrighted lyrics are committed to this repository; the original demo includes fictional lines only.
-
-## Browser app
-
-    npm run dev
-    npm test
-    npm run build
-
-The website runs at http://127.0.0.1:5173/ . For **web** Spotify login, register a separate redirect URI **http://127.0.0.1:5173/**. The browser has a different OAuth session from the terminal. Use the gear icon to configure Spotify on the website. For hosting on vibe.notagai.com, run **npm run build** and deploy the **dist/** folder as a static website, then register **https://vibe.notagai.com/** as another Spotify redirect URI. Nothing is deployed automatically by this repository.
-
-The website renders three original Canvas pixel scenes at 640x360, nearest-neighbor scaled to 1440p / 4K. It is currently atmospheric, not audio-frequency driven. True beat-accurate visualization requires a separate permission-based audio source. Spotify's platform policy also limits synchronizing Spotify sound recordings with visual media, so review https://developer.spotify.com/policy before publicly distributing such an integration.
+1-5 navigation, / search, j/k or arrows browse, Enter select, Space pause/resume, n/p skip, s shuffle, r repeat, f like, q quit.
 
 ## Developer notes
 
-The terminal shell and Spotify API code use Node.js APIs and ANSI terminal controls. The only image-decoding dependency is **sharp**, used to convert Spotify JPEG covers into true-color terminal pixels. It works in interactive PowerShell, Windows Terminal, and VS Code integrated terminals.
-
-- Spotify client ID and refreshed access tokens are written to your user profile's **~/.geekify/config.json**, best-effort user-only filesystem permissions; the file is **not encrypted**.
-- Run **geekify logout** to clear the token from that file.
-- Use **npm unlink -g geekify** to remove the globally linked command.
-- The CLI's OAuth redirect uses **http://127.0.0.1:8888/callback** because Spotify permits HTTP only for loopback IP literals; \`localhost\` is not a permitted OAuth redirect.
-- The terminal UI uses 6-second polling for playback state, respecting rate-limit headers where possible.
-- The UI doesn't persist or upload music files. All audio comes from the existing Spotify player.
-
-## Limits
-
-Search, library and Spotify Connect depend on the Spotify Web API, a Premium developer account and the user's available playback devices. Remote commands may fail if playback is unavailable or a Spotify endpoint is restricted. Spotify retains control of audio playback and track availability.
-
-Testing:
-
-    npm install
-    npm test
-    npm run cli:smoke
-    npm run build
-
-GitHub Actions checks those commands on main and pull requests.
+- VS Code panel uses original modular pixel artwork in assets/geekify/ui and DOM/CSS in vscode/panel.*, with vscode/extension.cjs as the host.
+- Spotify API calls, lyrics fetching, OAuth refresh and browser launching run in the extension host. The Web Playback SDK, if supported, runs only in the webview.
+- Spotify account and refresh tokens reside in ~/.geekify/config.json with best-effort restricted permissions. The file is not encrypted; geekify logout clears the token.
+- npm test, npm run cli:smoke and npm run build check the project. Extension packaging additionally depends on the VSIX packager.
+- The previous terminal graphics implementation remains in cli/graphics-app.mjs as legacy code but is no longer the default.
+- Lyrics from LRCLIB may be unavailable or unsynchronized.
