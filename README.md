@@ -11,18 +11,21 @@ Open PowerShell in the cloned repository:
     git pull origin main
     npm install
     npm link
-    npm run extension:install
+    # Geekify now installs its matching VS Code extension on first launch.
+    # If VS Code was already open, reload its window after the first installation.
 
-Reload VS Code after installing the extension. Then, from any VS Code integrated terminal:
+Then, from any VS Code integrated terminal:
 
     geekify                 # Opens the wooden pixel-art VS Code panel
     geekify demo            # Panel demo without Spotify
     geekify-fast            # Fast native ANSI terminal controller
     geekify-fast demo       # Fast no-account terminal demo
 
-**One-time extension installation is required.** If the terminal command doesn't open a panel, select **Command Palette > Geekify: Open Player**. On a new PC, install the extension there too. To install manually, run npm run extension:package, then use **Extensions > ... > Install from VSIX**.
+**The launcher now installs or updates the VS Code extension automatically when needed.** Once installed, the extension registers a localhost-only, authenticated panel bridge. The CLI requests that the editor actually open and waits for an acknowledgement. If VS Code needs a reload after installing, use **Ctrl+Shift+P > Developer: Reload Window** and rerun geekify. You can also open the panel with **Command Palette > Geekify: Open Player**.
 
-The CLI invokes VS Code's URI handler to reveal the extension's webview panel. Unlike the old terminal graphics mode, the panel loads the original Geekify artwork only once and updates song data with real DOM elements. It does not use the old full-screen SVG-to-PNG-to-terminal transfer loop.
+If the automatic install fails, run `npm run extension:install` inside the Geekify repository. For manual installation, run `npm run extension:package`, then use **Extensions > ... > Install from VSIX**. Use `code --list-extensions --show-versions` to verify `notagai.geekify@0.4.1` is present. The launcher reports extension and bridge failures instead of silently claiming the panel opened.
+
+The CLI first calls the extension's local, authenticated bridge to reveal its webview panel, falling back to VS Code's URI handler for initial activation. Unlike the old terminal graphics mode, the panel loads the original Geekify artwork only once and updates song data with real DOM elements. It does not use the old full-screen SVG-to-PNG-to-terminal transfer loop.
 
 ## Spotify authorization and audio
 
