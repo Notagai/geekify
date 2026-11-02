@@ -23,7 +23,18 @@ test('VS Code extension uses a real Webview with local static images',()=>{
   assert.ok(source.includes('vscode.window.registerUriHandler'), 'URI handlers must be registered through vscode.window');
   assert.ok(!source.includes('vscode.commands.registerUriHandler'));
   assert.ok(source.includes('startPanelBridge'));
-  assert.ok(ui.includes('ResizeObserver'));
+  assert.ok(ui.includes("createElementNS(NS,'svg')"),'icons should render as complete SVGs');
+  assert.ok(ui.includes("const workspace=make('div','workspace',frame)"),'responsive sections should use DOM layout');
+  const css=readFileSync(resolve(root,'vscode/panel.css'),'utf8');
+  assert.ok(css.includes('@media(max-width:690px)'),'narrow editor has a stacked layout');
+  assert.ok(!css.includes('width:1200px'),'no fixed 1200px board');
+  for(const sprite of ['shuffle','previous','pause','next','repeat','progress-empty','progress-fill','progress-knob']){
+    assert.ok(!ui.includes("'player/"+sprite+"'"),'broken '+sprite+' PNG must not be used as a UI control');
+  }
+  assert.ok(css.includes('background-image:var(--flowers-image)'));
+  assert.ok(css.includes('background-image:var(--polaroid-image)'));
+  assert.ok(ui.includes("progress.setAttribute('role','slider')"));
+  assert.ok(ui.includes("transportButtons.pause.replaceChildren(icon("));
   assert.ok(ui.includes('onSpotifyWebPlaybackSDKReady'));
   assert.ok(!ui.includes('sharp('));
   for(const path of ['vscode/panel.html','vscode/panel.css','vscode/panel.js'])
