@@ -4,15 +4,15 @@ import sharp from 'sharp';
 import { GeekifyGraphicsApp, terminalSceneLayout } from '../cli/graphics-app.mjs';
 import { sceneSvg,hitTest,WIDTH,HEIGHT,TABS } from '../cli/lyrics-scene.mjs';
 
-test('Music desk renders actual Foldered wood and stationery, no mascot',async()=>{
+test('Music desk renders original Geekify pixel-art skins, no mascot',async()=>{
   const app=new GeekifyGraphicsApp({demo:true,forceImages:true});
   await app.loadAssets();
-  assert.match(app.assets.wood,/^data:image\/png;base64,/);
-  assert.match(app.assets.tabActive,/^data:image\/png;base64,/);
-  assert.match(app.assets.tabInactive,/^data:image\/png;base64,/);
-  assert.match(app.assets.sticky,/^data:image\/png;base64,/);
+  assert.match(app.assets['frame/wood-tile'],/^data:image\/png;base64,/);
+  assert.match(app.assets['paper/tab-active'],/^data:image\/png;base64,/);
+  assert.match(app.assets['paper/tab-inactive'],/^data:image\/png;base64,/);
+  assert.match(app.assets['paper/lyrics-panel'],/^data:image\/png;base64,/);
   const image=sceneSvg(app.renderState(),app.assets);
-  assert.ok(image.includes('url(#wood)'));
+  assert.ok(image.includes('url(#geekify-wood)'));
   assert.ok(image.includes('Lyrics'));
   assert.ok(image.includes('Midnight Frequency'));
   assert.ok(!image.includes('renSprite'));
@@ -39,12 +39,12 @@ test('Lyrics occupy main panel; track details are in compact bottom player',()=>
 });
 
 test('App interactions map to proper navigation and playback hotspots',()=>{
-  assert.deepEqual(TABS,['now','search','library','playlists','devices']);
-  assert.deepEqual(hitTest(130,170),{type:'tab',value:'now'});
-  assert.deepEqual(hitTest(875,586),{type:'play'});
-  assert.deepEqual(hitTest(400,80),{type:'lyrics'});
-  assert.deepEqual(hitTest(555,80),{type:'queue'});
-  assert.deepEqual(hitTest(390,249,'library'),{type:'item',index:2});
+  assert.deepEqual(TABS,['now','search','library','playlists','devices','settings']);
+  assert.deepEqual(hitTest(130,154),{type:'tab',value:'now'});
+  assert.deepEqual(hitTest(880,582),{type:'play'});
+  assert.deepEqual(hitTest(360,90),{type:'lyrics'});
+  assert.deepEqual(hitTest(525,90),{type:'queue'});
+  assert.deepEqual(hitTest(390,245,'library'),{type:'item',index:2});
   assert.equal(hitTest(9,9),null);
 });
 

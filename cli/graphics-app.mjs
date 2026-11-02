@@ -10,7 +10,7 @@ import { sceneSvg, hitTest, TABS, WIDTH, HEIGHT } from './lyrics-scene.mjs';
 import { preferredGraphicsProtocol, probeKittyGraphics, encodeInlineImage, encodeKittyImage, kittyDeleteImage } from './terminal-graphics.mjs';
 
 const ESC='\x1b[';
-const DEMO_TRACK={id:'ren-demo',uri:null,title:'Midnight Frequency',artist:'geekify sessions',
+const DEMO_TRACK={id:'geekify-demo',uri:null,title:'Midnight Frequency',artist:'geekify sessions',
   album:'unreleased transmissions',durationMs:136000};
 const DEMO_LINES=[
   {timeMs:0,text:'the city is still awake'},
@@ -60,7 +60,7 @@ export class GeekifyGraphicsApp {
     this.running=false;this.drawing=false;this.pending=false;
     this.lastFrame=-1;this.lastRender=0;
     this.renderTimer=null;this.pollTimer=null;
-    this.status='Space: play/pause   /: search   1-5: tabs   q: exit';
+    this.status='Space: play/pause   /: search   1-6: tabs   q: exit';
     this.statusUntil=0;
   }
   position(){
@@ -83,22 +83,18 @@ export class GeekifyGraphicsApp {
     return this.playback.device.id||undefined;
   }
   async loadAssets(){
-    // Exact original Foldered artwork, stored as transport-safe base64 files.
-    // PNG data URIs are required because the SVG rasterizer does not reliably
-    // decode embedded WebP in all supported Sharp/libvips distributions.
-    const specs=[['wood','wood-tile.webp.b64',386,386],
-      ['tabActive','tab-active.webp.b64',203,58],
-      ['tabInactive','tab-inactive.webp.b64',203,58],
-      ['sticky','sticky-note.webp.b64',258,88]];
-    await Promise.all(specs.map(async([key,name,w,h])=>{
-      try{
-        const encoded=readFileSync(new URL('../assets/foldered/'+name,import.meta.url),'utf8').trim();
-        const original=Buffer.from(encoded,'base64');
-        const png=await sharp(original,{limitInputPixels:8000000})
-          .resize(w,h,{fit:'fill',kernel:'nearest'}).png().toBuffer();
-        this.assets[key]='data:image/png;base64,'+png.toString('base64');
-      }catch(error){if(key==='wood')throw new Error('Foldered wood texture failed to load: '+error.message);}
-    }));
+    // Each asset is a separate original Geekify pixel-art PNG, not a screenshot.
+    // Load all skins once; image rendering then composites them with live lyrics.
+    const manifest=JSON.parse(readFileSync(new URL('../assets/geekify/manifest.json',import.meta.url),'utf8'));
+    const root=new URL('../',import.meta.url);
+    this.assets={};
+    for(const item of manifest.assets){
+      const bytes=readFileSync(new URL('../'+item.file,import.meta.url));
+      this.assets[item.id]='data:image/png;base64,'+bytes.toString('base64');
+    }
+    if(!this.assets['paper/lyrics-panel']||!this.assets['frame/wood-tile']){
+      throw new Error('Geekify artwork pack incomplete. Please reinstall or update the repo.');
+    }
   }
   async cycleRepeat(){
     const modes=['off','context','track'];
@@ -231,7 +227,7 @@ export class GeekifyGraphicsApp {
     this.tab=tab;this.selected=0;this.listOffset=0;
     if(tab==='now')this.subtab='lyrics';
     this.playlist=null;this.draw();
-    if(tab!=='now')await this.loadList();
+    if(tab!=='now'&&tab!=='settings')await this.loadList();
   }
   async loadList(offset=this.listOffset){
     if(this.demo){this.list=[];this.listTotal=0;this.draw();return;}
@@ -239,6 +235,7 @@ export class GeekifyGraphicsApp {
     this.loading=true;this.listOffset=offset;this.list=[];this.selected=0;this.draw();
     try{
       let response;
+      if(this.tab==='settings'){return;}
       if(this.tab==='search'){
         if(!this.query)return;
         response=(await this.api.search(this.query,offset))?.tracks;
@@ -398,7 +395,7 @@ export class GeekifyGraphicsApp {
       else await this.changeTab('now');
       return;
     }
-    if(/^[1-5]$/.test(input)){await this.changeTab(TABS[Number(input)-1]);return;}
+    if(/^[1-6]$/.test(input)){await this.changeTab(TABS[Number(input)-1]);return;}
     if(input==='q'){this.quit();return;}
     if(input==='/'){this.searchActive=true;this.query='';this.draw();return;}
     if(input===' '){await this.togglePlayback();return;}
@@ -408,6 +405,6 @@ export class GeekifyGraphicsApp {
     if(input==='r'&&!this.demo){await this.cycleRepeat();return;}
     if(input==='s'&&!this.demo){await this.action(()=>this.api.shuffle(!this.playback?.shuffle_state,this.deviceId()));return;}
     if(input==='f'&&!this.demo&&this.track?.uri){await this.action(()=>this.api.save(this.track.uri));return;}
-    if(input==='?')this.say('1-5 tabs • / search • Space play • n/p skip • s shuffle • r repeat • f like • q quit',8);
+    if(input==='?')this.say('1-6 tabs • / search • Space play • n/p skip • s shuffle • r repeat • f like • q quit',8);
   }
 }
