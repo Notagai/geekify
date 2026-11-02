@@ -1,7 +1,7 @@
 {
-  "version": 2,
+  "version": 3,
   "reference": "assets/geekify/reference/approved-composition.png",
-  "description": "Original Geekify sprites plus repeatable pixel-art parchment tiles, torn edges and separately anchored repeating forest border.",
+  "description": "Modular Geekify skins with tileable parchment, fixed forest edges, transparent pixel ivy, and code-rendered pixel icons in the VS Code player.",
   "assets": [
     {
       "id": "frame/corner-tl",
@@ -648,6 +648,16 @@
       ],
       "source": "Geekify original tileable sprite set",
       "role": "pixel pine and mountain border, repeat-x"
+    },
+    {
+      "id": "branding/ivy-corner",
+      "file": "assets/geekify/ui/branding/ivy-corner.svg",
+      "size": [
+        128,
+        104
+      ],
+      "source": "Original Geekify pixel-art leaves",
+      "role": "Transparent pixel ivy decoration for textured wood badge"
     }
   ]
 }
