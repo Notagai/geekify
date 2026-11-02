@@ -40,8 +40,8 @@ of the VS Code editor. Six new reusable pixel-art SVG sprites in
   forest that does not stretch to the panel width
 
 The CSS composes these independent layers. On shorter and narrower panes,
-only the forest's vertical size changes; paper grain and edge tiles remain
-at their native proportions. The paper content reserves bottom space for the
+the forest scales proportionally as a whole; paper grain and edge tiles
+stay at their native dimensions and none are stretched. The paper content reserves bottom space for the
 forest and scrolls when necessary.
 
 Install the updated extension with `git pull origin main`, `npm install`,
