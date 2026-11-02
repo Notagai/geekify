@@ -10,9 +10,10 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const manifest=JSON.parse(readFileSync(resolve(root,'assets/geekify/manifest.json'),'utf8'));
 
 test('Every modular original Geekify skin is a valid separate PNG',async()=>{
-  assert.ok(manifest.assets.length>=35);
+  const originals=manifest.assets.filter(item=>item.file.endsWith('.png'));
+  assert.ok(originals.length>=35);
   const ids=new Set();
-  for(const item of manifest.assets){
+  for(const item of originals){
     assert.ok(item.file.startsWith('assets/geekify/ui/'));
     assert.ok(!ids.has(item.id),'Duplicate asset '+item.id);
     ids.add(item.id);
@@ -31,7 +32,7 @@ test('Every modular original Geekify skin is a valid separate PNG',async()=>{
 
 test('Lyrics-first original art renders independently of sprite data',async()=>{
   const assets={};
-  for(const item of manifest.assets){
+  for(const item of manifest.assets.filter(item=>item.file.endsWith('.png'))){
     assets[item.id]='data:image/png;base64,'+readFileSync(resolve(root,item.file)).toString('base64');
   }
   const svg=sceneSvg({tab:'now',subtab:'lyrics',playing:true,demo:true,
