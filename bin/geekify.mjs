@@ -20,6 +20,7 @@ Usage:
   geekify --version     Show version
 
 Setup (once, from the cloned repo):
+  npm install
   npm link
 
 Spotify setup:

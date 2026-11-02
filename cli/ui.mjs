@@ -3,6 +3,8 @@ import { stdin, stdout } from 'node:process';
 import { login, logout, isConnected, loadConfig } from './auth.mjs';
 import { SpotifyApi, trackInfo } from './spotify.mjs';
 import { lookupLyrics, lyricIndex } from '../src/lyrics.js';
+import { demoCover, loadSpotifyCover, coverToAnsiRows } from './cover.mjs';
+import { renderWoodUI, paperWidth } from './wood-theme.mjs';
 
 const ESC='\x1b[';
 const CODE={reset:'\x1b[0m',base:'\x1b[38;2;224;220;238m',muted:'\x1b[38;2;145;141;171m',
@@ -48,6 +50,7 @@ export class GeekifyTui {
     this.playlist=null;this.busy=false;this.message='';this.messageUntil=0;
     this.prompt=null;this.help=false;this.running=false;this.timer=null;this.refreshTimer=null;
     this.rows=[];this.pollDelay=6000;this.loadingList=false;
+    this.coverImage=demoCover();this.coverAbort=null;this.coverKey='demo';this.coverError='';
   }
   alert(message,seconds=6){this.message=String(message);this.messageUntil=Date.now()+seconds*1000;this.draw();}
   async run(){
@@ -76,6 +79,7 @@ export class GeekifyTui {
     if(!this.running)return;this.running=false;
     clearTimeout(this.refreshTimer);clearInterval(this.timer);
     this.abortLyrics?.abort();
+    this.coverAbort?.abort();
     stdin.off('data',this.keyListener);
     stdout.off('resize',this.resizeListener);
     this.leaveScreen();
@@ -98,6 +102,7 @@ export class GeekifyTui {
       if(!clientId)throw new Error('Client ID required for Spotify authorization.');
       await login(clientId);
       this.demo=false;this.current=null;this.trackKey='';this.playing=false;this.playback=null;
+      this.coverImage=demoCover();this.coverKey='';
       this.items=[];this.selected=0;this.offset=0;this.tab='now';this.lyrics={lines:[],plain:[],status:'missing'};
       this.alert('Spotify connected!');
     }catch(error){
@@ -122,6 +127,7 @@ export class GeekifyTui {
       const key=this.current?.uri||this.current?.id||'none';
       if(key!==this.trackKey){
         this.trackKey=key;
+        void this.loadCover(this.current);
         this.lyrics={lines:[],plain:[],status:'missing'};
         this.plainOffset=0;
         if(this.current)void this.loadLyrics(this.current);
@@ -152,6 +158,26 @@ export class GeekifyTui {
     }finally{
       if(request===this.lyricRequest){this.lyricPending=false;this.draw();}
     }
+  }
+  async loadCover(track){
+    this.coverAbort?.abort();
+    const controller=new AbortController();
+    this.coverAbort=controller;
+    const key=track?.id||track?.uri||'none';
+    this.coverKey=key;
+    this.coverImage=demoCover(); // Artwork stays visible during image loading.
+    this.coverError='';
+    const url=track?.imageUrl;
+    if(!url){this.draw();return;}
+    try{
+      const pixels=await loadSpotifyCover(url,{signal:controller.signal});
+      if(!controller.signal.aborted&&this.coverKey===key&&pixels)this.coverImage=pixels;
+    }catch(error){
+      if(!controller.signal.aborted&&this.coverKey===key){
+        this.coverError=error.message;
+        this.alert('Cover: '+error.message);
+      }
+    }finally{if(!controller.signal.aborted)this.draw();}
   }
   playbackPosition(){
     if(this.demo){
@@ -272,8 +298,8 @@ export class GeekifyTui {
     const [verb,...parts]=text.trim().split(/\s+/);const arg=parts.join(' ');
     if(['quit','exit','q'].includes(verb)){this.quit();return;}
     if(['connect','login'].includes(verb)){await this.commandLogin();return;}
-    if(verb==='logout'){logout();this.demo=true;this.playing=false;this.current=DEMO_TRACK;clearTimeout(this.refreshTimer);this.alert('Logged out. Switched to demo mode.');return;}
-    if(verb==='demo'){this.demo=true;this.playing=false;this.current=DEMO_TRACK;clearTimeout(this.refreshTimer);this.alert('Demo mode enabled.');return;}
+    if(verb==='logout'){logout();this.demo=true;this.playing=false;this.current=DEMO_TRACK;this.coverImage=demoCover();clearTimeout(this.refreshTimer);this.alert('Logged out. Switched to demo mode.');return;}
+    if(verb==='demo'){this.demo=true;this.playing=false;this.current=DEMO_TRACK;this.coverImage=demoCover();clearTimeout(this.refreshTimer);this.alert('Demo mode enabled.');return;}
     if(verb==='refresh'){if(!this.demo)await this.refreshPlayback();if(this.tab!=='now')await this.loadList(this.offset);return;}
     if(verb==='help'){this.help=true;this.draw();return;}
     if(verb==='search'){this.searchQuery=arg;await this.setTab('search');return;}
@@ -311,48 +337,57 @@ export class GeekifyTui {
     lines.push({text,color});
   }
   renderNow(lines,inner,height){
-    const compact=height<24;
     const track=this.current;
-    if(!compact)this.put(lines,'','base');
-    this.put(lines,'  NOW PLAYING'+(this.demo?'  /  DEMO':'  /  SPOTIFY'),'mint');
-    if(!compact)this.put(lines,'','base');
+    const compact=height<25;
+    this.put(lines,'  NOW PLAYING  /  '+(this.demo?'DEMO SESSION':'SPOTIFY SESSION'),'mint');
     if(!track){
-      this.put(lines,'  Nothing playing. Open Spotify on an active device.','bright');
-      this.put(lines,'  Press c to connect or 5 to see available devices.','muted');
+      this.put(lines,'  No active track. Open Spotify Desktop and start a song.','bright');
+      this.put(lines,'  [5] Devices   [/] Search   [c] Connect Spotify','muted');
       return;
     }
-    this.put(lines,'  '+trim(track.title,inner-4),'bright');
-    this.put(lines,'  '+trim(track.artist,inner-4),'muted');
-    if(!compact){this.put(lines,'  '+trim(track.album||'',inner-4),'muted');this.put(lines,'','base');}
+    // Album covers use ANSI half-block pixels. They live inside the paper panel,
+    // even in VS Code's terminal where inline JPEG/PNG is not supported.
+    const artWidth=inner>=69?20:inner>=48?16:12;
+    const artHeight=height<20?4:height<26?6:height<32?8:10;
+    const artRows=coverToAnsiRows(this.coverImage,artWidth,artHeight);
+    const metadata=[
+      '  ♪ '+trim(track.title,Math.max(9,inner-artWidth-5)),
+      '  '+trim(track.artist,Math.max(9,inner-artWidth-5)),
+      '  '+trim(track.album||'',Math.max(9,inner-artWidth-5)),
+      '',
+      '  '+(this.playing?'▶  playing':'Ⅱ  paused'),
+      '  '+(this.demo?'original demo audio: none':'output: '+(this.playback?.device?.name||'Spotify')),
+      '  / search    space pause',
+      '  n next     p previous',
+      '  [5] switch device',
+      '  [?] all shortcuts'
+    ];
+    for(let i=0;i<artHeight;i++){
+      lines.push({artRow:artRows[i],artWidth,right:metadata[i]||'',color:i===0?'bright':i===1?'muted':'base'});
+    }
     const now=this.playbackPosition(),duration=track.durationMs||0;
-    const barSize=Math.max(8,Math.min(36,inner-25));
-    const filled=Math.max(0,Math.min(barSize,Math.round(barSize*(duration?now/duration:0))));
+    const barSize=Math.max(8,Math.min(32,inner-25));
+    const filled=Math.min(barSize,Math.max(0,Math.round(barSize*(duration?now/duration:0))));
     this.put(lines,'  '+clock(now)+'   '+'━'.repeat(filled)+'─'.repeat(barSize-filled)+'   '+clock(duration),'pink');
-    if(!compact){this.put(lines,'  SPACE play/pause  ·  n next  ·  p previous  ·  +/- volume  ·  f save','muted');this.put(lines,'','base');}
-    this.put(lines,'  ─────  L Y R I C S  ─────','violet');
-    if(!compact)this.put(lines,'','base');
+    this.put(lines,'  ────  L Y R I C S  ────','violet');
     if(this.demo){
-      this.renderSynced(lines,DEMO_LYRICS,now,!compact);
-      if(!compact)this.put(lines,'  Original demo lyrics; no audio stream.','muted');
+      this.renderSynced(lines,DEMO_LYRICS,now,false);
     }else if(this.lyricPending){
-      this.put(lines,'  Looking for lyrics on LRCLIB…','warning');
+      this.put(lines,'  Looking for synchronized lyrics…','warning');
     }else if(this.lyrics.status==='synced'){
-      this.renderSynced(lines,this.lyrics.lines,now,!compact);
-      if(!compact)this.put(lines,'  Synced by track position  ·  LRCLIB','muted');
+      this.renderSynced(lines,this.lyrics.lines,now,false);
     }else if(this.lyrics.status==='plain'){
-      const plain=this.lyrics.plain;
-      const count=compact?2:5;
-      for(const row of plain.slice(this.plainOffset,this.plainOffset+count))this.put(lines,'  '+trim(row,inner-4),'bright');
-      if(!compact){this.put(lines,'','base');this.put(lines,'  Unsynced lyrics (j/k to scroll)  ·  LRCLIB','warning');}
+      const count=height<22?2:4;
+      for(const row of this.lyrics.plain.slice(this.plainOffset,this.plainOffset+count))
+        this.put(lines,'  '+trim(row,inner-3),'bright');
+      if(!compact)this.put(lines,'  Unsynced lyrics · use ↑↓ to scroll','muted');
     }else{
-      this.put(lines,'  '+(this.lyrics.status==='error'?'Lyrics provider unavailable.':'No matching lyrics available for this song.'),'warning');
-      if(!compact)this.put(lines,'  The track may be instrumental or an unmatched release.','muted');
+      this.put(lines,'  '+(this.lyrics.status==='error'?'Lyrics provider unavailable.':'No matching lyrics for this song.'),'warning');
     }
     if(!compact){
       this.put(lines,'','base');
-      const device=this.playback?.device;
-      if(!this.demo&&device)this.put(lines,'  OUTPUT  '+device.name+'   |   VOL '+String(device.volume_percent??'--')+'%   |   '+(this.playback?.shuffle_state?'SHUFFLE ON':'SHUFFLE OFF'),'muted');
-      if(this.demo)this.put(lines,'  DEMO MODE  |  Press c to connect to Spotify','muted');
+      if(this.demo)this.put(lines,'  Demo mode · Connect Spotify with [c]','muted');
+      else this.put(lines,'  '+trim('Volume '+String(this.playback?.device?.volume_percent??'--')+'% · '+(this.playback?.shuffle_state?'Shuffle on':'Shuffle off')+' · Spotify Connect',inner-4),'muted');
     }
   }
   renderSynced(lines,arr,position,spacious=true){
@@ -412,31 +447,18 @@ export class GeekifyTui {
     for(const row of keys)this.put(lines,'  '+row,row==='KEYBOARD SHORTCUTS'||row==='COMMANDS'?'bright':'muted');
   }
   makeRows(){
-    const w=Math.max(48,Math.min(stdout.columns||100,220));
-    const h=Math.max(16,Math.min(stdout.rows||32,90));
-    const inner=w-2;
+    const w=Math.max(48,Math.min(stdout.columns||100,180));
+    const h=Math.max(16,Math.min(stdout.rows||32,80));
+    const inner=paperWidth(w)-4;
     const lines=[];
-    this.put(lines,'╭'+'─'.repeat(inner)+'╮','violet');
-    this.put(lines,'│  ✳  G E E K I F Y .     YOUR MUSIC, REIMAGINED'+ ' '.repeat(Math.max(0,inner-49))+'│','pink');
-    this.put(lines,'├'+'─'.repeat(inner)+'┤','violet');
-    const labels=tabs.map((name,i)=>(this.tab===name?'['+(i+1)+' '+name.toUpperCase()+']':' '+(i+1)+' '+name+' ')).join('   ');
-    this.put(lines,'  '+labels,'bright');
-    this.put(lines,'  '+(this.demo?'● DEMO MODE':'● SPOTIFY CONNECTED')+'    '+(this.playing?'▶ PLAYING':'Ⅱ PAUSED')+'     '+(this.busy?'SYNCING…':'READY'),'mint');
     if(this.help)this.renderHelp(lines);
     else if(this.tab==='now')this.renderNow(lines,inner,h);
     else this.renderList(lines,inner,h);
-    const status=(this.message&&Date.now()<this.messageUntil)?this.message:'Press ? for help  ·  / search  ·  c connect  ·  q quit';
-    // Reserve the status and command prompt even in a small VS Code terminal.
-    if(lines.length>h-3)lines.length=h-3;
-    const remaining=Math.max(0,h-lines.length-3);
-    for(let i=0;i<remaining;i++)this.put(lines,'','base');
-    this.put(lines,'├'+'─'.repeat(inner)+'┤','violet');
-    this.put(lines,this.prompt?(this.prompt.mode==='search'?'  SEARCH > ':'  COMMAND :')+this.prompt.text+'_':'  '+trim(status,inner-4),this.prompt?'pink':'warning');
-    this.put(lines,'╰'+'─'.repeat(inner)+'╯','violet');
-    return lines.slice(0,h).map(({text,color})=>{
-      const available=w;
-      const shown=pad(text,available);
-      return (CODE[color]||CODE.base)+shown+CODE.reset;
+    const status=(this.message&&Date.now()<this.messageUntil)?this.message:
+      ' [/] Search   [space] Play/Pause   [?] Help   [c] Connect   [q] Quit';
+    return renderWoodUI({
+      width:w,height:h,tabs,active:this.tab,connected:!this.demo,playing:this.playing,
+      lines,status,prompt:this.prompt,help:this.help
     });
   }
   draw(){

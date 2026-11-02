@@ -1,6 +1,6 @@
 {
   "name": "geekify",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Pixel-art web music experience and Spotify terminal UI.",
@@ -12,9 +12,13 @@
     "tui": "node bin/geekify.mjs",
     "cli:smoke": "node bin/geekify.mjs --help && node bin/geekify.mjs --version",
     "build": "node scripts/build.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "tui:demo": "node bin/geekify.mjs demo"
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "sharp": "^0.34.4"
   }
 }

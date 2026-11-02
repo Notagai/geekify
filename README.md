@@ -10,6 +10,7 @@ Open your VS Code terminal and run:
 
     git clone https://github.com/Notagai/geekify.git
     cd geekify
+    npm install
     npm link
 
 After **npm link** (one-time setup), open **any** VS Code terminal, even in a different project, and type:
@@ -27,6 +28,20 @@ To launch the browser experience instead:
     npm run dev
 
 Open http://127.0.0.1:5173/ .
+
+## The wood-and-paper terminal design
+
+Geekify now draws a **walnut wood-grain background with a cream paper panel** using standard 24-bit ANSI terminal colors. The look borrows Foldered's warm palette, not its folders or artwork. There are no folder shapes, and nothing launches in a separate window.
+
+The **Now Playing** view contains a pixel-rendered album cover beside the track title and artist, a progress bar, and lyrics beneath. The cover is sourced from Spotify's album-art metadata and decoded locally with the cross-platform `sharp` dependency. The image uses colored Unicode half blocks, so it works in VS Code's integrated terminal without sixel, Kitty image protocols, or a GUI. The original demo includes a generated pixel-art cover. If Spotify has no cover art or the download fails, a placeholder remains visible.
+
+To install the new album-art decoder after pulling an older clone:
+
+    npm install
+    npm link
+    geekify
+
+For the best results, expand VS Code's terminal pane to at least 80 columns by 25 rows. Geekify automatically reduces cover size and metadata when the terminal is shorter. All existing keyboard commands remain available.
 
 ## Connect Spotify to the terminal UI
 
@@ -112,7 +127,7 @@ The website renders three original Canvas pixel scenes at 640x360, nearest-neigh
 
 ## Developer notes
 
-The repo has **no third-party npm dependencies**. The CLI uses built-in Node.js APIs and ANSI terminal controls. It works in interactive PowerShell, Windows Terminal, and VS Code integrated terminals.
+The terminal shell and Spotify API code use Node.js APIs and ANSI terminal controls. The only image-decoding dependency is **sharp**, used to convert Spotify JPEG covers into true-color terminal pixels. It works in interactive PowerShell, Windows Terminal, and VS Code integrated terminals.
 
 - Spotify client ID and refreshed access tokens are written to your user profile's **~/.geekify/config.json**, best-effort user-only filesystem permissions; the file is **not encrypted**.
 - Run **geekify logout** to clear the token from that file.
@@ -127,6 +142,7 @@ Search, library and Spotify Connect depend on the Spotify Web API, a Premium dev
 
 Testing:
 
+    npm install
     npm test
     npm run cli:smoke
     npm run build

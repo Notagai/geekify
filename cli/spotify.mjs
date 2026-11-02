@@ -73,5 +73,6 @@ export function trackInfo(item){
   return {id:song.id,uri:song.uri,title:song.name,
     artist:song.artists?.map(a=>a.name).join(', ')||'Unknown artist',
     primaryArtist:song.artists?.[0]?.name||'Unknown artist',
-    album:song.album?.name||'',durationMs:song.duration_ms||0};
+    album:song.album?.name||'',durationMs:song.duration_ms||0,
+    imageUrl:song.album?.images?.[0]?.url||''};
 }
