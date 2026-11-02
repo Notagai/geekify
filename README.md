@@ -23,9 +23,27 @@ Then, from any VS Code integrated terminal:
 
 **The launcher now installs or updates the VS Code extension automatically when needed.** Once installed, the extension registers a localhost-only, authenticated panel bridge. The CLI requests that the editor actually open and waits for an acknowledgement. If VS Code needs a reload after installing, use **Ctrl+Shift+P > Developer: Reload Window** and rerun geekify. You can also open the panel with **Command Palette > Geekify: Open Player**.
 
-If the automatic install fails, run `npm run extension:install` inside the Geekify repository. For manual installation, run `npm run extension:package`, then use **Extensions > ... > Install from VSIX**. Use `code --list-extensions --show-versions` to verify `notagai.geekify@0.4.4` is present. The launcher reports extension and bridge failures instead of silently claiming the panel opened.
+If the automatic install fails, run `npm run extension:install` inside the Geekify repository. For manual installation, run `npm run extension:package`, then use **Extensions > ... > Install from VSIX**. Use `code --list-extensions --show-versions` to verify `notagai.geekify@0.4.6` is present. The launcher reports extension and bridge failures instead of silently claiming the panel opened.
 
 The CLI first calls the extension's local, authenticated bridge to reveal its webview panel, falling back to VS Code's URI handler for initial activation. Unlike the old terminal graphics mode, the panel loads the original Geekify artwork only once and updates song data with real DOM elements. It does not use the old full-screen SVG-to-PNG-to-terminal transfer loop.
+
+## Webview artwork and responsive layout repair (v0.4.6)
+
+Several sprites in the original generated asset sheet were genuinely truncated or
+contaminated by captions, including playback controls, sidebar icons and progress
+bar textures. Their source PNGs were **not** complete interface controls. Geekify's
+VS Code panel no longer displays those cropped control PNGs. Complete inline
+SVG icons, wood-styled pixel buttons and a CSS seek bar replace them. The
+flowers and polaroid appear as caption-free cropped decorations; the
+paper/background images and usable wood materials remain.
+
+The visual player now uses a flexible DOM layout rather than scaling an entire
+1200×675 artboard into every editor pane. Wide editors show a sidebar beside
+the parchment; narrow panes stack the six navigation buttons, parchment and
+playback bar, so the window fills and the player does not get cut off.
+
+The changes are tested by CI, including simulated webview startup and playback
+state, but still require a visual check in the user's actual VS Code installation.
 
 ## VS Code CLI verification repair (v0.4.5)
 
