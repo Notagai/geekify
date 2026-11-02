@@ -30,11 +30,21 @@ npm link
 geekify demo --ren
 ```
 
+If the screen resembles the original ANSI wood/text layout, you are likely running an old globally-linked version or the older fallback. To run the current branch directly instead of depending on a previous `npm link`, use:
+
+```powershell
+git pull --ff-only origin experiment/ren-pixel-bob
+node bin/geekify.mjs graphics-check
+node bin/geekify.mjs demo --ren
+```
+
+The `graphics-check` command reports whether the terminal replies to a Kitty graphics probe. **Graphical mode does not silently fall back.** If support is missing, `--ren` reports setup instructions. A failed probe can sometimes be tested with `geekify demo --ren --force-images`, but this cannot add image support to a terminal that lacks it.
+
 Press Space to start the demo timer and watch Ren bob. Press q to quit to your normal prompt. To connect your Spotify session, use `geekify login` once, then run `geekify --ren`.
 
 **Controls:** click the sidebar tabs, player buttons, or Ren for a reaction. Use 1–5 for tabs, Space for playback, n/p for skip, / for search, arrow keys and Enter for list navigation, PgUp/PgDn for pages, and q to exit. The app is only a controller: Spotify itself produces all audio. Demo mode has no audio.
 
-The original text UI remains `geekify`. If a different terminal has no image support, `geekify --ren` uses the ANSI Ren fallback; `geekify --ren-ansi` explicitly selects it. In a graphics-capable terminal where automatic detection or the capability probe fails, `geekify --ren --force-images` bypasses the probe; this does **not** magically enable graphics in an unsupported terminal.
+The original text UI remains `geekify`. If a different terminal has no image support, `geekify --ren` reports a clear error instead of silently using ANSI. `geekify --ren-ansi` explicitly selects the text-art fallback. In a graphics-capable terminal where automatic detection or the capability probe fails, `geekify --ren --force-images` bypasses the probe; this does **not** magically enable graphics in an unsupported terminal.
 
 The scene is currently rendered as PNG frames by Sharp; Ren's motion is timer-based, not synchronized to Spotify audio. This is an experimental app-like terminal renderer. We have CI tests, but the graphics must still be checked visually in your actual VS Code setup. No AI calls, browser, external terminal, or separate window are needed.
 
