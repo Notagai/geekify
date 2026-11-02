@@ -25,12 +25,10 @@ test('Windows: spawn real .cmd shim with spaces and pass VSIX path as one argume
     const dir=mkdtempSync(join(tmpdir(),'geekify windows CLI spaces '));
     const root=join(dir,'VS Code');
     const bin=join(root,'bin');
-    const resource=join(root,'resources','app','out');
-    mkdirSync(bin,{recursive:true});mkdirSync(resource,{recursive:true});
-    writeFileSync(join(root,'Code.exe'),'fixture');
-    writeFileSync(join(resource,'cli.js'),'fixture');
+    mkdirSync(bin,{recursive:true});
     const shim=join(bin,'code.cmd');
-    writeFileSync(shim,'@echo off\r\necho ARG1=%~1\r\necho ARG2=%~2\r\n');
+    // The CLI must work even if VS Code's internal exe/cli.js layout changes.
+    writeFileSync(shim,'@echo off\r\nif /I "%~1"=="--version" (\r\n  echo 1.122.0\r\n  exit /b 0\r\n)\r\necho ARG1=%~1\r\necho ARG2=%~2\r\n');
     const badShadow=join(dir,'code.cmd');
     writeFileSync(badShadow,'@echo off\r\nexit /b 9009\r\n');
     assert.equal(resolveVsCodeCommand({
@@ -38,18 +36,21 @@ test('Windows: spawn real .cmd shim with spaces and pass VSIX path as one argume
       whereOutput:[badShadow,shim].join('\r\n')
     }),shim,'ignore shadowed/broken code.cmd and use actual VS Code install');
     assert.equal(resolveVsCodeCommand({env:{GEEKIFY_VSCODE_COMMAND:shim}}),shim);
+    assert.equal(resolveVsCodeCommand({
+      env:{LOCALAPPDATA:join(dir,'none')},
+      // The stock Windows install contains both an extensionless code shell
+      // wrapper and code.cmd, and where.exe prints the extensionless one first.
+      whereOutput:[join(bin,'code'),shim].join('\r\n')
+    }),shim);
     assert.throws(()=>resolveVsCodeCommand({
       env:{GEEKIFY_VSCODE_COMMAND:badShadow}
-    }),/valid VS Code/);
+    }),/did not pass --version/);
     const local=join(dir,'local app');
     const standardRoot=join(local,'Programs','Microsoft VS Code');
     const standardBin=join(standardRoot,'bin');
-    mkdirSync(join(standardRoot,'resources','app','out'),{recursive:true});
     mkdirSync(standardBin,{recursive:true});
     const standardShim=join(standardBin,'code.cmd');
-    writeFileSync(join(standardRoot,'Code.exe'),'fixture');
-    writeFileSync(join(standardRoot,'resources','app','out','cli.js'),'fixture');
-    writeFileSync(standardShim,'@echo off\r\n');
+    writeFileSync(standardShim,'@echo off\r\nif /I "%~1"=="--version" (\r\n echo 1.122.0\r\n exit /b 0\r\n)\r\nexit /b 2\r\n');
     assert.equal(resolveVsCodeCommand({
       env:{LOCALAPPDATA:local},
       whereOutput:badShadow
