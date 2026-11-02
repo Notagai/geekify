@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
+import { terminalSceneLayout } from '../cli/ren-graphics.mjs';
 import {
   preferredGraphicsProtocol,encodeKittyImage,kittyDeleteImage,probeKittyGraphics
 } from '../cli/terminal-graphics.mjs';
@@ -48,4 +49,27 @@ test('Kitty probe fails safely when image rendering is unavailable',async()=>{
   assert.equal(await probeKittyGraphics({input,output,timeoutMs:250}),false);
   assert.equal(input.isRaw,false);
   assert.equal(input.listenerCount('data'),0);
+});
+
+test('Graphical scene is letterboxed instead of stretching in tall VS Code panes',()=>{
+  const tall=terminalSceneLayout(125,72);
+  assert.equal(tall.contentWidth/tall.contentHeight > 1.75,true);
+  assert.equal(tall.contentWidth/tall.contentHeight < 1.80,true);
+  assert.ok(tall.top>0);
+  assert.equal(tall.left,0);
+  const wide=terminalSceneLayout(160,30);
+  assert.ok(wide.left>0);
+  assert.equal(wide.top,0);
+});
+
+test('Kitty probe tolerates a device-attributes response before image confirmation',async()=>{
+  const input=new EventEmitter();
+  input.isTTY=true;input.isRaw=false;input.setRawMode=value=>{input.isRaw=value;};input.resume=()=>{};
+  const output={isTTY:true,write:()=>{
+    setImmediate(()=>input.emit('data',Buffer.from('\x1b[?1;2c')));
+    setTimeout(()=>input.emit('data',Buffer.from('\x1b_Gi=739031;OK\x1b\\')),15);
+    return true;
+  }};
+  assert.equal(await probeKittyGraphics({input,output,timeoutMs:150}),true);
+  assert.equal(input.isRaw,false);
 });
