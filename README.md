@@ -27,6 +27,18 @@ If the automatic install fails, run `npm run extension:install` inside the Geeki
 
 The CLI first calls the extension's local, authenticated bridge to reveal its webview panel, falling back to VS Code's URI handler for initial activation. Unlike the old terminal graphics mode, the panel loads the original Geekify artwork only once and updates song data with real DOM elements. It does not use the old full-screen SVG-to-PNG-to-terminal transfer loop.
 
+## VS Code CLI verification repair (v0.4.5)
+
+This fixes a false-negative installation check when `where.exe code` already points
+to the normal Visual Studio Code `bin\code.cmd`. The previous version required
+specific internal `Code.exe` and `cli.js` paths to exist, even if the actual CLI
+could run. Geekify now selects the full `code.cmd` path and verifies it by
+executing `--version`, avoiding the extensionless shell script `bin\code`.
+
+If it still cannot find the launcher, run
+`& "$env:LOCALAPPDATA\Programs\Microsoft VS Code\bin\code.cmd" --version`
+in PowerShell and use `geekify panel-doctor` to inspect the detailed error.
+
 ## Windows VS Code launcher discovery repair (v0.4.4)
 
 Geekify no longer invokes whichever `code` command Windows resolves first.
