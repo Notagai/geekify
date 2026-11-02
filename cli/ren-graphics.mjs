@@ -25,11 +25,24 @@ const DEMO_LINES=[
 const safeError=error=>String(error?.message||error).replace(/[\x00-\x1f\x7f-\x9f]/g,' ').slice(0,112);
 export { encodeInlineImage } from './terminal-graphics.mjs';
 export const supportsInlineImages=env=>preferredGraphicsProtocol(env)!=='ansi'||env?.GEEKIFY_FORCE_IMAGES==='1';
+// Keep the 16:9 pixel-art scene correctly proportioned inside tall or wide
+// terminal panes. Terminal cell dimensions vary; 9x18 is a conservative estimate.
+export function terminalSceneLayout(columns,rows){
+  const width=Math.min(2300,Math.max(48,columns)*9);
+  const height=Math.min(1500,Math.max(16,rows)*18);
+  const scale=Math.min(width/SCENE_WIDTH,height/SCENE_HEIGHT);
+  const contentWidth=Math.max(1,Math.floor(SCENE_WIDTH*scale));
+  const contentHeight=Math.max(1,Math.floor(SCENE_HEIGHT*scale));
+  const left=Math.floor((width-contentWidth)/2);
+  const top=Math.floor((height-contentHeight)/2);
+  return {width,height,contentWidth,contentHeight,left,top};
+}
 export class RenGraphicsApp {
   constructor({demo=false,forceImages=false}={}){
     this.demo=demo||!isConnected();
     this.forceImages=forceImages;
     this.protocol='ansi';this.lastImageId=0;this.frameSequence=0;
+    this.imageLayout=null;
     this.api=new SpotifyApi();
     this.track=this.demo?DEMO_TRACK:null;
     this.playing=false;
@@ -263,11 +276,18 @@ export class RenGraphicsApp {
       const state=this.renderState();
       const svg=sceneSvg(state);
       const cols=Math.max(48,stdout.columns||100),rows=Math.max(16,stdout.rows||32);
-      // Match the frame's aspect to the terminal's cell rectangle so the image
-      // occupies the whole pane and the mouse hotspots remain aligned.
-      const pixelWidth=Math.min(2300,cols*9),pixelHeight=Math.min(1500,rows*18);
+      // Preserve the artwork's aspect ratio. Tall VS Code terminal panes used
+      // to stretch Ren and the wooden UI nearly twice their intended height.
+      const layout=terminalSceneLayout(cols,rows);
+      this.imageLayout=layout;
       const png=await sharp(Buffer.from(svg),{limitInputPixels:2000000})
-        .resize(pixelWidth,pixelHeight,{fit:'fill',kernel:'nearest'})
+        .resize(layout.contentWidth,layout.contentHeight,{fit:'fill',kernel:'nearest'})
+        .extend({
+          top:layout.top,left:layout.left,
+          bottom:layout.height-layout.top-layout.contentHeight,
+          right:layout.width-layout.left-layout.contentWidth,
+          background:'#553621'
+        })
         .png({compressionLevel:6}).toBuffer();
       if(!this.running)return;
       if(this.protocol==='kitty'){
@@ -290,8 +310,11 @@ export class RenGraphicsApp {
   }
   async mouse(code,col,row,release){
     if(release)return;
-    const x=(col-.5)/(stdout.columns||100)*SCENE_WIDTH;
-    const y=(row-.5)/(stdout.rows||32)*SCENE_HEIGHT;
+    const layout=this.imageLayout||terminalSceneLayout(stdout.columns||100,stdout.rows||32);
+    const px=(col-.5)/(stdout.columns||100)*layout.width;
+    const py=(row-.5)/(stdout.rows||32)*layout.height;
+    const x=(px-layout.left)/layout.contentWidth*SCENE_WIDTH;
+    const y=(py-layout.top)/layout.contentHeight*SCENE_HEIGHT;
     if((code&32)===32)return; // Mouse movement is not a click.
     if((code&64)===64){
       if(this.tab!=='now'&&this.list.length){
