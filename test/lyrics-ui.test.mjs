@@ -41,7 +41,7 @@ test('Lyrics occupy main panel; track details are in compact bottom player',()=>
 test('App interactions map to proper navigation and playback hotspots',()=>{
   assert.deepEqual(TABS,['now','search','library','playlists','devices','settings']);
   assert.deepEqual(hitTest(130,154),{type:'tab',value:'now'});
-  assert.deepEqual(hitTest(875,586),{type:'play'});
+  assert.deepEqual(hitTest(880,582),{type:'play'});
   assert.deepEqual(hitTest(360,90),{type:'lyrics'});
   assert.deepEqual(hitTest(525,90),{type:'queue'});
   assert.deepEqual(hitTest(390,245,'library'),{type:'item',index:2});
