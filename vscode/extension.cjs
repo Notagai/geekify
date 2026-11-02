@@ -1,8 +1,9 @@
 'use strict';
 // Geekify visual player: local VS Code webview. Never sends private tokens to a server.
 const vscode=require('vscode');
-const {readFileSync}=require('node:fs');
+const {readFileSync,writeFileSync,mkdirSync}=require('node:fs');
 const {join}=require('node:path');
+const {homedir}=require('node:os');
 const {randomBytes}=require('node:crypto');
 const {startPanelBridge}=require('./bridge.cjs');
 
@@ -18,7 +19,25 @@ const DEMO_LYRICS=[
 const allowedActions=new Set(['toggle','next','previous','seek','save','shuffle','repeat',
   'playItem','transfer','search','library','playlists','playlist','devices','queue','openWeb','refresh']);
 const safeError=e=>String(e?.message||e).replace(/[\x00-\x1f\x7f-\x9f]/g,' ').slice(0,175);
+
 let activePanel;
+function writeStatus(phase,detail=''){
+  try{
+    const dir=join(homedir(),'.geekify');
+    mkdirSync(dir,{recursive:true,mode:0o700});
+    writeFileSync(join(dir,'extension-status.json'),JSON.stringify({
+      version:'0.4.2',phase,detail:detail.slice(0,180),updatedAt:Date.now()
+    }),{encoding:'utf8',mode:0o600});
+  }catch{}
+}
+function acknowledgeUriRequest(requestId){
+  if(!/^[a-f0-9]{32}$/.test(requestId||''))return;
+  const dir=join(homedir(),'.geekify');
+  mkdirSync(dir,{recursive:true,mode:0o700});
+  writeFileSync(join(dir,'panel-open-'+requestId+'.json'),JSON.stringify({
+    requestId,opened:true,updatedAt:Date.now()
+  }),{encoding:'utf8',mode:0o600});
+}
 function assetUrls(webview,extensionUri){
   const manifest=JSON.parse(readFileSync(join(extensionUri.fsPath,'assets','geekify','manifest.json'),'utf8'));
   const result={};
@@ -203,31 +222,42 @@ async function openPanel(context,forceDemo=false){
   });
 }
 async function activate(context){
+  writeStatus('activating');
   const open=async demo=>{
     try{await openPanel(context,demo);}
     catch(error){
       const reason=safeError(error);
+      writeStatus('open-error',reason);
       vscode.window.showErrorMessage('Geekify could not open its player: '+reason);
       throw error;
     }
   };
-  context.subscriptions.push(
-    vscode.commands.registerCommand('geekify.open',()=>open(false)),
-    vscode.commands.registerUriHandler({
-      handleUri:uri=>{
-        if(uri.path!=='/open')return;
-        const demo=new URLSearchParams(uri.query).get('demo')==='1';
-        return open(demo);
-      }
-    })
-  );
-  // Start when VS Code launches, so the global CLI can ask this extension
-  // to open an editor and receive an actual success/failure response.
+  try{
+    context.subscriptions.push(
+      vscode.commands.registerCommand('geekify.open',()=>open(false)),
+      vscode.commands.registerUriHandler({
+        handleUri:async uri=>{
+          if(uri.path!=='/open')return;
+          const params=new URLSearchParams(uri.query);
+          await open(params.get('demo')==='1');
+          // A one-shot URI acknowledgement still works if the background
+          // loopback listener cannot start in this VS Code profile.
+          acknowledgeUriRequest(params.get('request'));
+        }
+      })
+    );
+  }catch(error){
+    writeStatus('registration-error',safeError(error));
+    throw error;
+  }
   try{
     const bridge=await startPanelBridge(open);
     context.subscriptions.push({dispose:()=>bridge.close()});
+    writeStatus('ready');
   }catch(error){
-    vscode.window.showWarningMessage('Geekify panel bridge unavailable: '+safeError(error)+
+    const reason=safeError(error);
+    writeStatus('bridge-error',reason);
+    vscode.window.showWarningMessage('Geekify panel bridge unavailable: '+reason+
       '. Use the command palette: Geekify: Open Player.');
   }
 }
