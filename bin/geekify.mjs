@@ -12,6 +12,8 @@ const help=`geekify.  /  your music, in the terminal
 Usage:
   geekify               Launch the interactive Spotify-style interface
   geekify demo          Launch a no-account demo
+  geekify --ren         Launch with a bobbing Ren sprite
+  geekify demo --ren    Preview Ren without Spotify credentials
   geekify login         Connect a Spotify account using OAuth PKCE
   geekify doctor        Check scopes and Spotify Connect devices (read-only)
   geekify logout        Clear the stored Spotify session
@@ -37,7 +39,9 @@ Terminal navigation:
 
 Spotify audio is played by Spotify, not streamed into this terminal.
 `;
-const [command]=process.argv.slice(2);
+const args=process.argv.slice(2);
+const [command]=args;
+const ren=args.includes('--ren');
 async function main(){
   if(['--help','-h','help'].includes(command)){console.log(help);return;}
   if(['--version','-v'].includes(command)){console.log('geekify 0.2.0');return;}
@@ -66,8 +70,8 @@ async function main(){
     });
     return;
   }
-  if(command==='demo'||command===undefined){
-    const app=new GeekifyTui({demo:command==='demo'});
+  if(command==='demo'||command===undefined||command==='--ren'){
+    const app=new GeekifyTui({demo:command==='demo',mascot:ren?'ren':null});
     await app.run();
     return;
   }
