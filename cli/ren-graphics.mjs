@@ -279,6 +279,7 @@ export class RenGraphicsApp {
     if(release)return;
     const x=(col-.5)/(stdout.columns||100)*SCENE_WIDTH;
     const y=(row-.5)/(stdout.rows||32)*SCENE_HEIGHT;
+    if((code&32)===32)return; // Mouse movement is not a click.
     if((code&64)===64){
       if(this.tab!=='now'&&this.list.length){
         this.selected=Math.max(0,Math.min(this.list.length-1,this.selected+(code&1?1:-1)));
