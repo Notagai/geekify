@@ -20,7 +20,8 @@ test('VS Code extension uses a real Webview with local static images',()=>{
   const source=readFileSync(resolve(root,'vscode/extension.cjs'),'utf8');
   const ui=readFileSync(resolve(root,'vscode/panel.js'),'utf8');
   assert.ok(source.includes('createWebviewPanel'));
-  assert.ok(source.includes('registerUriHandler'));
+  assert.ok(source.includes('vscode.window.registerUriHandler'), 'URI handlers must be registered through vscode.window');
+  assert.ok(!source.includes('vscode.commands.registerUriHandler'));
   assert.ok(source.includes('startPanelBridge'));
   assert.ok(ui.includes('ResizeObserver'));
   assert.ok(ui.includes('onSpotifyWebPlaybackSDKReady'));
