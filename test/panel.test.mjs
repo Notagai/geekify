@@ -12,6 +12,8 @@ test('Distinct visual and terminal-native Geekify entrypoints',()=>{
   assert.equal(pkg.main,'./vscode/extension.cjs');
   assert.equal(pkg.contributes.commands[0].command,'geekify.open');
   assert.ok(pkg.activationEvents.includes('onUri'));
+  assert.ok(pkg.activationEvents.includes('onStartupFinished'));
+  assert.deepEqual(pkg.extensionKind,['ui']);
   assert.ok(pkg.engines.vscode);
 });
 test('VS Code extension uses a real Webview with local static images',()=>{
@@ -19,6 +21,7 @@ test('VS Code extension uses a real Webview with local static images',()=>{
   const ui=readFileSync(resolve(root,'vscode/panel.js'),'utf8');
   assert.ok(source.includes('createWebviewPanel'));
   assert.ok(source.includes('registerUriHandler'));
+  assert.ok(source.includes('startPanelBridge'));
   assert.ok(ui.includes('ResizeObserver'));
   assert.ok(ui.includes('onSpotifyWebPlaybackSDKReady'));
   assert.ok(!ui.includes('sharp('));
@@ -33,7 +36,7 @@ test('Both command help paths run without VS Code or Spotify',()=>{
   }
 });
 test('Extension files have valid JavaScript syntax',()=>{
-  for(const file of ['vscode/extension.cjs','vscode/panel.js','bin/geekify.mjs','bin/geekify-fast.mjs']){
+  for(const file of ['vscode/extension.cjs','vscode/panel.js','bin/geekify.mjs','bin/geekify-fast.mjs','cli/panel-bridge.mjs','cli/vscode-command.mjs','vscode/bridge.cjs','scripts/install-extension.mjs']){
     const result=spawnSync(process.execPath,['--check',resolve(root,file)],{encoding:'utf8'});
     assert.equal(result.status,0,result.stderr);
   }
