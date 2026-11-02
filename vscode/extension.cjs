@@ -4,6 +4,7 @@ const vscode=require('vscode');
 const {readFileSync}=require('node:fs');
 const {join}=require('node:path');
 const {randomBytes}=require('node:crypto');
+const {startPanelBridge}=require('./bridge.cjs');
 
 const DEMO={id:'geekify-demo',title:'Midnight Frequency',artist:'geekify sessions',
   durationMs:136000,album:'unreleased transmissions',uri:null};
@@ -44,15 +45,16 @@ async function openPanel(context,forceDemo=false){
     if(forceDemo)activePanel.enableDemo();
     return;
   }
+  // Resolve dependencies BEFORE creating a panel, to avoid a blank editor on startup errors.
+  const [auth,spotify,lyricModule]=await Promise.all([
+    import('../cli/auth.mjs'),import('../cli/spotify.mjs'),import('../src/lyrics.js')
+  ]);
   const panel=vscode.window.createWebviewPanel('geekify.player','geekify.',
     vscode.ViewColumn.One,{
       enableScripts:true,retainContextWhenHidden:true,
       localResourceRoots:[vscode.Uri.joinPath(context.extensionUri,'assets','geekify','ui'),
         vscode.Uri.joinPath(context.extensionUri,'vscode')]
     });
-  const [auth,spotify,lyricModule]=await Promise.all([
-    import('../cli/auth.mjs'),import('../cli/spotify.mjs'),import('../src/lyrics.js')
-  ]);
   const api=new spotify.SpotifyApi();
   let closed=false,pollTimer,lyricAbort,polling=false,trackKey='';
   let demo=forceDemo||!auth.isConnected();
@@ -72,8 +74,13 @@ async function openPanel(context,forceDemo=false){
     lyrics=DEMO_LYRICS;lyricsStatus='synced';notice='Demo mode; no Spotify audio.';
     emit();
   }};
+  try{
+    panel.webview.html=getHtml(panel.webview,context.extensionUri);
+  }catch(error){
+    panel.dispose();
+    throw error;
+  }
   activePanel=state;
-  panel.webview.html=getHtml(panel.webview,context.extensionUri);
   async function loadLyrics(next){
     lyricAbort?.abort();lyrics=[];lyricsStatus='missing';
     const controller=new AbortController();lyricAbort=controller;
@@ -195,17 +202,34 @@ async function openPanel(context,forceDemo=false){
     closed=true;clearTimeout(pollTimer);lyricAbort?.abort();activePanel=null;
   });
 }
-function activate(context){
+async function activate(context){
+  const open=async demo=>{
+    try{await openPanel(context,demo);}
+    catch(error){
+      const reason=safeError(error);
+      vscode.window.showErrorMessage('Geekify could not open its player: '+reason);
+      throw error;
+    }
+  };
   context.subscriptions.push(
-    vscode.commands.registerCommand('geekify.open',()=>openPanel(context)),
+    vscode.commands.registerCommand('geekify.open',()=>open(false)),
     vscode.commands.registerUriHandler({
       handleUri:uri=>{
         if(uri.path!=='/open')return;
         const demo=new URLSearchParams(uri.query).get('demo')==='1';
-        return openPanel(context,demo);
+        return open(demo);
       }
     })
   );
+  // Start when VS Code launches, so the global CLI can ask this extension
+  // to open an editor and receive an actual success/failure response.
+  try{
+    const bridge=await startPanelBridge(open);
+    context.subscriptions.push({dispose:()=>bridge.close()});
+  }catch(error){
+    vscode.window.showWarningMessage('Geekify panel bridge unavailable: '+safeError(error)+
+      '. Use the command palette: Geekify: Open Player.');
+  }
 }
 function deactivate(){activePanel?.panel.dispose();}
 module.exports={activate,deactivate};
