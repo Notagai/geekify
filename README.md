@@ -2,25 +2,41 @@
 
 Your Spotify controller, inside the VS Code terminal. Also includes a pixel-art website designed for vibe.notagai.com.
 
-## Experimental high-detail Ren (branch only)
+## Experimental graphical Ren, inside the VS Code terminal
 
-The experiment/ren-pixel-bob branch includes an **image-rendered terminal app**, not an Electron window or VS Code extension. WezTerm is the recommended host because it implements the iTerm2 inline image protocol. The entire textured 1024×576 wood-and-paper interface is rasterized as PNG frames, then shown in the terminal's alternate screen. Ren has a multi-colour pixel sprite with two bobbing frames.
+The experiment/ren-pixel-bob branch is a standalone terminal app, not a VS Code extension, desktop window, or browser application. You **do not need WezTerm**. When you run `geekify --ren` in the VS Code integrated terminal, Geekify uses the Kitty terminal graphics protocol (introduced in VS Code 1.110) to render a full-resolution wood-and-paper scene with an animated Ren sprite. Spotify navigation, mouse controls, album art, lyrics, and playback remain in the terminal.
 
-Install [WezTerm](https://wezterm.org/), open its terminal and run:
+### One-time VS Code settings
 
-    git fetch origin
-    git switch experiment/ren-pixel-bob
-    npm install
-    npm link
-    geekify demo --ren
+Use **Preferences: Open User Settings (JSON)** from the VS Code Command Palette. These are *user settings*, so Geekify also works when the VS Code workspace is a different repository.
 
-Press **Space** to play the demo timer and watch Ren bob. Use **q** to exit. To connect your actual Spotify session, use `geekify login`, then `geekify --ren`. The old text UI remains `geekify`, and the original small Ren ANSI experiment is available as `geekify --ren-ansi` or `geekify demo --ren-ansi`.
+```json
+{
+  "terminal.integrated.enableImages": true,
+  "terminal.integrated.gpuAcceleration": "auto",
+  "terminal.integrated.windowsUseConptyDll": true
+}
+```
 
-**Controls:** click the sidebar tabs or player buttons; click Ren for a reaction; click library rows to open/play; use 1–5 for tabs, Space for playback, n/p for next/previous, / to search, arrows/j/k and Enter for list navigation, PgUp/PgDn for pages, and q to exit. Spotify itself still produces all audio. Demo mode has no audio.
+The third setting is required on Windows. If you already have a settings.json, **merge these three entries into the existing object** instead of replacing your other settings. VS Code needs version 1.110 or newer. Restart the integrated terminal after changing settings. As with other terminal image applications, actual appearance/performance depend on your terminal font size, available pane space, and host support.
 
-**Terminal compatibility:** normal PowerShell or Windows Terminal alone cannot guarantee this graphics protocol. For a VS Code terminal with `"terminal.integrated.enableImages": true`, try `geekify --ren --force-images`. This is experimental, and the same image-drawing technique might not behave correctly in every terminal. If a terminal doesn't support inline images, Geekify refuses to emit unreadable escape garbage; use the ANSI fallback. There is no need to install a VS Code extension or open a browser.
+### Run it
 
-Images are rendered by Sharp and transmitted with iTerm2 OSC 1337 using the WezTerm doNotMoveCursor=1 extension. Current proof-of-concept redraws a PNG every 400ms rather than true beat detection, so bobbing is timer-based, and resizing can stretch the scene. Search, liked tracks, playlists, devices and playback control use the existing Spotify API client. No AI calls are made.
+```powershell
+git fetch origin
+git switch experiment/ren-pixel-bob
+npm install
+npm link
+geekify demo --ren
+```
+
+Press Space to start the demo timer and watch Ren bob. Press q to quit to your normal prompt. To connect your Spotify session, use `geekify login` once, then run `geekify --ren`.
+
+**Controls:** click the sidebar tabs, player buttons, or Ren for a reaction. Use 1–5 for tabs, Space for playback, n/p for skip, / for search, arrow keys and Enter for list navigation, PgUp/PgDn for pages, and q to exit. The app is only a controller: Spotify itself produces all audio. Demo mode has no audio.
+
+The original text UI remains `geekify`. If a different terminal has no image support, `geekify --ren` uses the ANSI Ren fallback; `geekify --ren-ansi` explicitly selects it. In a graphics-capable terminal where automatic detection or the capability probe fails, `geekify --ren --force-images` bypasses the probe; this does **not** magically enable graphics in an unsupported terminal.
+
+The scene is currently rendered as PNG frames by Sharp; Ren's motion is timer-based, not synchronized to Spotify audio. This is an experimental app-like terminal renderer. We have CI tests, but the graphics must still be checked visually in your actual VS Code setup. No AI calls, browser, external terminal, or separate window are needed.
 
 ## Quick start: launch Geekify from anywhere
 
