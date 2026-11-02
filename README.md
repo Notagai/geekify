@@ -23,13 +23,28 @@ Then, from any VS Code integrated terminal:
 
 **The launcher now installs or updates the VS Code extension automatically when needed.** Once installed, the extension registers a localhost-only, authenticated panel bridge. The CLI requests that the editor actually open and waits for an acknowledgement. If VS Code needs a reload after installing, use **Ctrl+Shift+P > Developer: Reload Window** and rerun geekify. You can also open the panel with **Command Palette > Geekify: Open Player**.
 
-If the automatic install fails, run `npm run extension:install` inside the Geekify repository. For manual installation, run `npm run extension:package`, then use **Extensions > ... > Install from VSIX**. Use `code --list-extensions --show-versions` to verify `notagai.geekify@0.4.3` is present. The launcher reports extension and bridge failures instead of silently claiming the panel opened.
+If the automatic install fails, run `npm run extension:install` inside the Geekify repository. For manual installation, run `npm run extension:package`, then use **Extensions > ... > Install from VSIX**. Use `code --list-extensions --show-versions` to verify `notagai.geekify@0.4.4` is present. The launcher reports extension and bridge failures instead of silently claiming the panel opened.
 
 The CLI first calls the extension's local, authenticated bridge to reveal its webview panel, falling back to VS Code's URI handler for initial activation. Unlike the old terminal graphics mode, the panel loads the original Geekify artwork only once and updates song data with real DOM elements. It does not use the old full-screen SVG-to-PNG-to-terminal transfer loop.
 
-## Windows CLI quoting repair (v0.4.3)
+## Windows VS Code launcher discovery repair (v0.4.4)
 
-Version 0.4.3 fixes `cmd.exe` quoting on Windows when the VS Code launcher
+Geekify no longer invokes whichever `code` command Windows resolves first.
+A broken or shadowed `code.cmd` can try to run `..\\Code.exe`
+from the Geekify project directory. Geekify now validates a real
+VS Code `bin\\code.cmd`, its companion `Code.exe` and `resources/app/out/cli.js`
+before invoking it. It checks standard user/system install directories and
+then fully qualified launchers from `where.exe code`.
+
+If VS Code is installed in a nonstandard location, set the full path:
+`$env:GEEKIFY_VSCODE_COMMAND = 'C:\\Actual VS Code Location\\bin\\code.cmd'`.
+Run `where.exe code` to investigate broken PATH launchers.
+The extension installer also prefers the npm entrypoint through Node rather
+than an unverified `npm.cmd` shim.
+
+## Windows CLI quoting repair (v0.4.4)
+
+Version 0.4.4 fixes `cmd.exe` quoting on Windows when the VS Code launcher
 runs `code --list-extensions`, installs an extension from a VSIX path, or
 opens the VS Code URI. This was previously reported as a command with doubled
 quotation marks not being recognized. Geekify now runs Windows shims with
@@ -37,12 +52,12 @@ verbatim /c arguments and has dedicated Windows CI coverage.
 
 ## Fix for a panel that doesn't open
 
-Geekify **0.4.3** fixes an extension activation crash in older builds:
+Geekify **0.4.4** fixes an extension activation crash in older builds:
 the URI handler was registered on `vscode.commands` instead of `vscode.window`.
 The command-line tool was working, but VS Code never completed extension activation.
 
 Run `git pull origin main`, `npm install`, `npm link`, then `geekify`.
-The launcher installs version 0.4.3 automatically.
+The launcher installs version 0.4.4 automatically.
 If VS Code was open during installation, use **Developer: Reload Window**
 and run `geekify` again.
 For diagnostics run `geekify panel-doctor`. It reports the installed extension version,
