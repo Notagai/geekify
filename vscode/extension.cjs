@@ -145,7 +145,7 @@ async function openPanel(context,forceDemo=false){
     if(type==='search')response=(await api.search(String(query||'').slice(0,100)))?.tracks?.items||[];
     else if(type==='library')response=(await api.saved())?.items?.map(x=>x.track).filter(Boolean)||[];
     else if(type==='playlists')response=(await api.playlists())?.items||[];
-    else if(type==='playlist')response=(await api.playlistItems(playlist.id))?.items?.map(x=>x.item||x.track).filter(Boolean)||[];
+    else if(type==='playlist')response=spotify.playlistTrackItems(await api.playlistItems(playlist.id));
     else if(type==='devices')response=(await api.devices())?.devices||[];
     else if(type==='queue'){
       queue=(await api.queue())?.queue?.slice(0,20).map(spotify.trackInfo).filter(Boolean)||[];
@@ -157,8 +157,9 @@ async function openPanel(context,forceDemo=false){
       if(type==='playlists')return {type:'playlist',id:item.id,title:item.name,
         subtitle:(item.items?.total??item.tracks?.total??0)+' tracks',name:item.name};
       const t=spotify.trackInfo(item);
-      return {type:'track',id:t?.id,uri:t?.uri,title:t?.title||'Unavailable',subtitle:t?.artist||''};
-    });
+      if(!t)return null;
+      return {type:'track',id:t.id,uri:t.uri,title:t.title,subtitle:t.artist};
+    }).filter(Boolean);
     emit();
   }
   async function act(message){

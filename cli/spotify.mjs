@@ -74,9 +74,17 @@ export class SpotifyApi {
   }
   async save(uri){return this.request('/me/library',{method:'PUT',query:{uris:uri}});}
 }
+export function playlistTrackItems(payload){
+  // The /items endpoint returns rows shaped as {item: track}; older endpoints use {track: track}.
+  // Preserve only actual playable tracks; never turn metadata or removed tracks into dummy rows.
+  return (payload?.items||[]).map(row=>row?.item??row?.track??row)
+    .filter(song=>trackInfo(song)!==null);
+}
+
 export function trackInfo(item){
   const song=item?.track||item?.item||item;
-  if(!song||song.type!=='track')return null;
+  if(!song || typeof song!=='object' || song.type==='episode' || song.is_local ||
+    (song.type && song.type!=='track') || !song.name || !song.uri?.startsWith('spotify:track:'))return null;
   return {id:song.id,uri:song.uri,title:song.name,
     artist:song.artists?.map(a=>a.name).join(', ')||'Unknown artist',
     primaryArtist:song.artists?.[0]?.name||'Unknown artist',
