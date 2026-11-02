@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 import {createInterface} from 'node:readline/promises';
-import {spawn,spawnSync} from 'node:child_process';
-import {readFileSync} from 'node:fs';
-import {dirname} from 'node:path';
+import {spawn} from 'node:child_process';
+import {randomBytes} from 'node:crypto';
+import {readFileSync,rmSync} from 'node:fs';
+import {dirname,join} from 'node:path';
+import {homedir} from 'node:os';
 import {setTimeout as sleep} from 'node:timers/promises';
-import {runVsCode} from '../cli/vscode-command.mjs';
+import {runVsCode,runExecutable} from '../cli/vscode-command.mjs';
 import {requestPanelOpen} from '../cli/panel-bridge.mjs';
 import {fileURLToPath} from 'node:url';
 import {stdin,stdout} from 'node:process';
@@ -20,6 +22,7 @@ const help='geekify.  /  visual music player in VS Code\n\n'+
 '  geekify login       Authorize Spotify (PKCE)\n'+
 '  geekify logout      Disconnect Spotify\n'+
 '  geekify doctor      Diagnose Spotify permissions and devices\n'+
+'  geekify panel-doctor Diagnose the VS Code extension and launcher\n'+
 '  geekify web         Start the existing browser visualizer\n\n'+
 'The visual extension is automatically installed/updated when needed.\n'+
 'The panel uses the official Web Playback SDK when supported; VS Code may\n'+
@@ -44,11 +47,9 @@ function getExtensionVersion(){
 }
 function installPanelExtension(){
   console.log('Installing Geekify '+installedVersion+' into VS Code (one-time setup / update)…');
-  const result=spawnSync(process.platform==='win32'?'npm.cmd':'npm',
-    ['run','extension:install'],{
-      cwd:packageRoot,stdio:'inherit',windowsHide:true,
-      shell:process.platform==='win32',timeout:180000
-    });
+  const result=runExecutable('npm',['run','extension:install'],{
+    cwd:packageRoot,stdio:'inherit',timeout:180000
+  });
   if(result.error||result.status!==0)throw new Error(
     'The VS Code extension could not be installed. From the Geekify repository run '+
     '"npm run extension:install", then reload VS Code. '+
@@ -58,29 +59,68 @@ function installPanelExtension(){
     'VS Code reported Geekify '+(found||'not installed')+' after installation; expected '+
     installedVersion+'. Check Extensions > Installed and your VS Code profile.');
 }
+const geekifyDir=join(homedir(),'.geekify');
+function readExtensionStatus(){
+  try{
+    const info=JSON.parse(readFileSync(join(geekifyDir,'extension-status.json'),'utf8'));
+    if(!info||typeof info.phase!=='string')return null;
+    return info;
+  }catch{return null;}
+}
+function launchDiagnostic(result){
+  const status=readExtensionStatus();
+  const recent=status&&Date.now()-status.updatedAt<120000&&status.updatedAt<=Date.now();
+  if(!recent)return 'No recent extension activation recorded. The extension may be disabled, installed in another VS Code profile, or waiting for a window reload.';
+  if(status.version!==installedVersion)return 'The active extension is '+status.version+
+    ', but the CLI expects '+installedVersion+'. Reload the VS Code window.';
+  return 'Extension status: '+status.phase+(status.detail?' ('+status.detail+')':'')+
+    '. Bridge: '+(result.reason||'no response');
+}
+async function panelDoctor(){
+  console.log('Geekify CLI:',installedVersion);
+  console.log('VS Code extension:',getExtensionVersion()||'not installed in the CLI default profile');
+  const status=readExtensionStatus();
+  console.log('Extension activation:',status?JSON.stringify(status):'No activation status file found');
+  try{
+    const entry=JSON.parse(readFileSync(join(geekifyDir,'panel-bridge.json'),'utf8'));
+    console.log('Bridge registration:',Number.isInteger(entry.port)?'port '+entry.port:'invalid');
+  }catch{console.log('Bridge registration: none');}
+  console.log('If the extension is installed but inactive: Ctrl+Shift+P > Developer: Reload Window.');
+  console.log('Then check Ctrl+Shift+P > Geekify: Open Player.');
+}
 async function launchPanel(demo=false){
-  // This gets confirmation from the actual extension host, not just the VS Code CLI.
   const installed=getExtensionVersion();
   if(installed!==installedVersion)installPanelExtension();
   let result=await requestPanelOpen(demo);
   if(result.opened){console.log('Geekify panel opened.');return;}
-  // An old or newly installed extension may not have activated yet.
-  const uri='vscode://'+extensionId+'/open'+(demo?'?demo=1':'');
+  // The URI handler provides a one-shot acknowledgement independent of the
+  // background bridge. Opening a vscode:// URL can otherwise fail silently.
+  const requestId=randomBytes(16).toString('hex');
+  const ackFile=join(geekifyDir,'panel-open-'+requestId+'.json');
+  const uri='vscode://'+extensionId+'/open?request='+requestId+(demo?'&demo=1':'');
   const launched=runVsCode(['--open-url',uri]);
   if(launched.error||launched.status!==0)throw new Error(
     codeResultFailure(launched,'Opening VS Code')+
     '. Try Command Palette > Geekify: Open Player.');
-  for(let attempt=0;attempt<10;attempt++){
-    await sleep(650);
-    result=await requestPanelOpen(demo);
-    if(result.opened){console.log('Geekify panel opened in VS Code.');return;}
-  }
+  try{
+    for(let attempt=0;attempt<20;attempt++){
+      await sleep(600);
+      try{
+        const ack=JSON.parse(readFileSync(ackFile,'utf8'));
+        if(ack.requestId===requestId&&ack.opened===true){
+          console.log('Geekify panel opened in VS Code.');return;
+        }
+      }catch{}
+      result=await requestPanelOpen(demo);
+      if(result.opened){console.log('Geekify panel opened in VS Code.');return;}
+    }
+  }finally{try{rmSync(ackFile,{force:true});}catch{}}
   throw new Error(
-    'VS Code was asked to open Geekify, but the extension did not confirm it. '+
-    'Reload the VS Code window (Ctrl+Shift+P > Developer: Reload Window), '+
-    'then run geekify again. Alternatively run the Command Palette action '+
-    '"Geekify: Open Player". Details: '+(result.reason||'no response')+
-    '. Check Output > Log (Extension Host) if it still fails.');
+    'VS Code did not open Geekify. '+launchDiagnostic(result)+
+    ' Open Extensions in the CURRENT VS Code window and check that Geekify is enabled. '+
+    'If installed or updated during this session: Ctrl+Shift+P > Developer: Reload Window. '+
+    'If VS Code asks permission to open the geekify URI, allow it. '+
+    'For details run geekify panel-doctor, then check Output > Log (Extension Host).');
 }
 async function main(){
   if(['--help','-h','help'].includes(cmd)){console.log(help);return;}
@@ -99,6 +139,7 @@ async function main(){
   }
   if(cmd==='logout'){logout();console.log('Spotify session cleared.');return;}
   if(cmd==='doctor'){process.exitCode=await runDoctor();return;}
+  if(cmd==='panel-doctor'){await panelDoctor();return;}
   if(cmd==='web'){
     const child=spawn(process.execPath,[fileURLToPath(new URL('../scripts/dev.mjs',import.meta.url))],{stdio:'inherit'});
     await new Promise((resolve,reject)=>{child.on('error',reject);
