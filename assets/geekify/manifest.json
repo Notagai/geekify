@@ -1,0 +1,593 @@
+{
+  "version": 1,
+  "reference": "assets/geekify/reference/approved-composition.png",
+  "description": "Original Geekify sprites cut from approved asset artwork, with detached label/glow removal and crisp limited-palette pixel edges. All lyrics and button labels remain dynamic.",
+  "assets": [
+    {
+      "id": "frame/corner-tl",
+      "file": "assets/geekify/ui/frame/corner-tl.png",
+      "size": [
+        110,
+        95
+      ],
+      "source_bbox": [
+        31,
+        5,
+        141,
+        100
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "frame/corner-tr",
+      "file": "assets/geekify/ui/frame/corner-tr.png",
+      "size": [
+        110,
+        94
+      ],
+      "source_bbox": [
+        171,
+        5,
+        281,
+        99
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "frame/corner-bl",
+      "file": "assets/geekify/ui/frame/corner-bl.png",
+      "size": [
+        111,
+        96
+      ],
+      "source_bbox": [
+        31,
+        106,
+        142,
+        202
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "frame/corner-br",
+      "file": "assets/geekify/ui/frame/corner-br.png",
+      "size": [
+        109,
+        93
+      ],
+      "source_bbox": [
+        171,
+        107,
+        280,
+        200
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "frame/edge-top",
+      "file": "assets/geekify/ui/frame/edge-top.png",
+      "size": [
+        329,
+        69
+      ],
+      "source_bbox": [
+        304,
+        20,
+        633,
+        89
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "frame/edge-bottom",
+      "file": "assets/geekify/ui/frame/edge-bottom.png",
+      "size": [
+        330,
+        59
+      ],
+      "source_bbox": [
+        304,
+        115,
+        634,
+        174
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "frame/edge-left",
+      "file": "assets/geekify/ui/frame/edge-left.png",
+      "size": [
+        69,
+        159
+      ],
+      "source_bbox": [
+        653,
+        8,
+        722,
+        167
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "frame/edge-right",
+      "file": "assets/geekify/ui/frame/edge-right.png",
+      "size": [
+        59,
+        158
+      ],
+      "source_bbox": [
+        772,
+        8,
+        831,
+        166
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "frame/wood-tile",
+      "file": "assets/geekify/ui/frame/wood-tile.png",
+      "size": [
+        256,
+        256
+      ],
+      "source_bbox": [
+        861,
+        15,
+        1041,
+        163
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "branding/logo-tag",
+      "file": "assets/geekify/ui/branding/logo-tag.png",
+      "size": [
+        360,
+        153
+      ],
+      "source_bbox": [
+        1046,
+        7,
+        1406,
+        160
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "decor/vine",
+      "file": "assets/geekify/ui/decor/vine.png",
+      "size": [
+        132,
+        153
+      ],
+      "source_bbox": [
+        20,
+        191,
+        152,
+        344
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "decor/flowers",
+      "file": "assets/geekify/ui/decor/flowers.png",
+      "size": [
+        137,
+        165
+      ],
+      "source_bbox": [
+        165,
+        188,
+        302,
+        353
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "decor/polaroid",
+      "file": "assets/geekify/ui/decor/polaroid.png",
+      "size": [
+        176,
+        161
+      ],
+      "source_bbox": [
+        300,
+        195,
+        476,
+        356
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "decor/tape",
+      "file": "assets/geekify/ui/decor/tape.png",
+      "size": [
+        205,
+        123
+      ],
+      "source_bbox": [
+        1197,
+        204,
+        1402,
+        327
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "paper/lyrics-panel",
+      "file": "assets/geekify/ui/paper/lyrics-panel.png",
+      "size": [
+        900,
+        406
+      ],
+      "source_bbox": [
+        22,
+        575,
+        843,
+        841
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "paper/player-panel",
+      "file": "assets/geekify/ui/paper/player-panel.png",
+      "size": [
+        829,
+        117
+      ],
+      "source_bbox": [
+        20,
+        861,
+        849,
+        978
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "paper/tab-active",
+      "file": "assets/geekify/ui/paper/tab-active.png",
+      "size": [
+        212,
+        96
+      ],
+      "source_bbox": [
+        403,
+        368,
+        615,
+        464
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual skin, no dynamic text baked in"
+    },
+    {
+      "id": "paper/tab-inactive",
+      "file": "assets/geekify/ui/paper/tab-inactive.png",
+      "size": [
+        183,
+        100
+      ],
+      "source_bbox": [
+        620,
+        367,
+        803,
+        467
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual skin, no dynamic text baked in"
+    },
+    {
+      "id": "sidebar/button-active",
+      "file": "assets/geekify/ui/sidebar/button-active.png",
+      "size": [
+        319,
+        88
+      ],
+      "source_bbox": [
+        42,
+        467,
+        361,
+        555
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual skin, no dynamic text baked in"
+    },
+    {
+      "id": "sidebar/button-idle",
+      "file": "assets/geekify/ui/sidebar/button-idle.png",
+      "size": [
+        323,
+        89
+      ],
+      "source_bbox": [
+        42,
+        370,
+        365,
+        459
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual skin, no dynamic text baked in"
+    },
+    {
+      "id": "player/album-frame",
+      "file": "assets/geekify/ui/player/album-frame.png",
+      "size": [
+        159,
+        153
+      ],
+      "source_bbox": [
+        1082,
+        591,
+        1286,
+        825
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "player/heart",
+      "file": "assets/geekify/ui/player/heart.png",
+      "size": [
+        99,
+        74
+      ],
+      "source_bbox": [
+        1297,
+        652,
+        1396,
+        726
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "player/shuffle",
+      "file": "assets/geekify/ui/player/shuffle.png",
+      "size": [
+        86,
+        87
+      ],
+      "source_bbox": [
+        861,
+        868,
+        947,
+        955
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "player/previous",
+      "file": "assets/geekify/ui/player/previous.png",
+      "size": [
+        87,
+        87
+      ],
+      "source_bbox": [
+        958,
+        868,
+        1045,
+        955
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "player/pause",
+      "file": "assets/geekify/ui/player/pause.png",
+      "size": [
+        103,
+        98
+      ],
+      "source_bbox": [
+        1060,
+        862,
+        1163,
+        960
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "player/next",
+      "file": "assets/geekify/ui/player/next.png",
+      "size": [
+        94,
+        87
+      ],
+      "source_bbox": [
+        1175,
+        870,
+        1269,
+        957
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "player/repeat",
+      "file": "assets/geekify/ui/player/repeat.png",
+      "size": [
+        97,
+        89
+      ],
+      "source_bbox": [
+        1283,
+        868,
+        1380,
+        957
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "player/progress-empty",
+      "file": "assets/geekify/ui/player/progress-empty.png",
+      "size": [
+        397,
+        43
+      ],
+      "source_bbox": [
+        185,
+        997,
+        582,
+        1040
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "player/progress-fill",
+      "file": "assets/geekify/ui/player/progress-fill.png",
+      "size": [
+        392,
+        47
+      ],
+      "source_bbox": [
+        598,
+        997,
+        990,
+        1044
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "player/progress-knob",
+      "file": "assets/geekify/ui/player/progress-knob.png",
+      "size": [
+        74,
+        72
+      ],
+      "source_bbox": [
+        1268,
+        981,
+        1342,
+        1053
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "sidebar/icon-now",
+      "file": "assets/geekify/ui/sidebar/icon-now.png",
+      "size": [
+        83,
+        130
+      ],
+      "source_bbox": [
+        490,
+        202,
+        573,
+        332
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "sidebar/icon-search",
+      "file": "assets/geekify/ui/sidebar/icon-search.png",
+      "size": [
+        89,
+        121
+      ],
+      "source_bbox": [
+        573,
+        211,
+        662,
+        332
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "sidebar/icon-library",
+      "file": "assets/geekify/ui/sidebar/icon-library.png",
+      "size": [
+        88,
+        115
+      ],
+      "source_bbox": [
+        672,
+        213,
+        760,
+        328
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "sidebar/icon-playlists",
+      "file": "assets/geekify/ui/sidebar/icon-playlists.png",
+      "size": [
+        91,
+        108
+      ],
+      "source_bbox": [
+        777,
+        216,
+        868,
+        324
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "sidebar/icon-devices",
+      "file": "assets/geekify/ui/sidebar/icon-devices.png",
+      "size": [
+        79,
+        113
+      ],
+      "source_bbox": [
+        898,
+        212,
+        977,
+        325
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "sidebar/icon-settings",
+      "file": "assets/geekify/ui/sidebar/icon-settings.png",
+      "size": [
+        90,
+        120
+      ],
+      "source_bbox": [
+        1003,
+        211,
+        1093,
+        331
+      ],
+      "source": "geekify_retro_pixel_ui_asset_sheet.png",
+      "role": "visual asset"
+    },
+    {
+      "id": "player/default-cover",
+      "file": "assets/geekify/ui/player/default-cover.png",
+      "size": [
+        128,
+        128
+      ],
+      "source": "geekify_sepia_lyrics_interface.png",
+      "role": "demo cover only; live Spotify art is dynamic"
+    }
+  ]
+}
