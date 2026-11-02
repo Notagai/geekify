@@ -1,6 +1,6 @@
 {
   "name": "geekify",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "type": "module",
   "description": "Geekify VS Code pixel-art panel and fast Spotify terminal player.",
@@ -30,7 +30,8 @@
   "main": "./vscode/extension.cjs",
   "activationEvents": [
     "onCommand:geekify.open",
-    "onUri"
+    "onUri",
+    "onStartupFinished"
   ],
   "contributes": {
     "commands": [
@@ -46,5 +47,8 @@
   },
   "categories": [
     "Other"
+  ],
+  "extensionKind": [
+    "ui"
   ]
 }
