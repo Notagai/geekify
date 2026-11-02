@@ -23,3 +23,26 @@ jobs:
       - run: node --check cli/spotify.mjs
       - run: npm run build
       - run: npm run extension:package
+      - run: |
+          python3 - <<'PY'
+          import glob, zipfile
+          packages = glob.glob("geekify-*.vsix")
+          assert len(packages) == 1, f"Expected one VSIX, got {packages}"
+          with zipfile.ZipFile(packages[0]) as package:
+              files = set(package.namelist())
+          required = [
+              "extension/package.json",
+              "extension/vscode/extension.cjs",
+              "extension/vscode/bridge.cjs",
+              "extension/vscode/panel.html",
+              "extension/vscode/panel.css",
+              "extension/vscode/panel.js",
+              "extension/cli/auth.mjs",
+              "extension/cli/spotify.mjs",
+              "extension/src/lyrics.js",
+              "extension/assets/geekify/manifest.json",
+          ]
+          missing = [name for name in required if name not in files]
+          assert not missing, f"VSIX is missing runtime files: {missing}"
+          print("Verified",len(required),"required runtime files in",packages[0])
+          PY
