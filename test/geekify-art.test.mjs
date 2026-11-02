@@ -55,3 +55,11 @@ test('Six navigation tabs and image-backed playback control hotspots',()=>{
   assert.deepEqual(hitTest(525,90),{type:'queue'});
   assert.deepEqual(hitTest(450,245,'library'),{type:'item',index:2});
 });
+
+test('Only original Geekify skins are used by the graphical app',()=>{
+  const app=readFileSync(resolve(root,'cli/graphics-app.mjs'),'utf8');
+  assert.ok(app.includes('assets/geekify/manifest.json'));
+  assert.ok(!app.includes('assets/foldered/'));
+  assert.ok(!app.includes('renSpriteSvg'));
+  assert.ok(!app.includes('reinaSpriteSvg'));
+});
