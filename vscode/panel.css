@@ -64,12 +64,12 @@ button:focus-visible,input:focus-visible,[role="slider"]:focus-visible{outline:3
   filter:drop-shadow(1px 3px 1px #3b2115a8);
 }
 .decor-flowers{
-  width:94px;height:100px;
+  width:94px;height:94px;
   background-image:var(--flowers-image);
   background-size:100% auto;background-position:center -8px;
 }
 .decor-photo{
-  width:120px;height:107px;margin-left:-12px;
+  width:120px;height:91px;margin-left:-12px;
   background-image:var(--polaroid-image);
   background-size:100% auto;background-position:center -8px;
 }
