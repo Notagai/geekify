@@ -1,7 +1,7 @@
 name: Verify Geekify
 on:
   push:
-    branches: [main]
+    branches: [main, experiment/ren-pixel-bob]
   pull_request:
   workflow_dispatch:
 jobs:
@@ -16,6 +16,8 @@ jobs:
       - run: npm test
       - run: npm run cli:smoke
       - run: node --check cli/ui.mjs
+      - run: node --check cli/ren-scene.mjs
+      - run: node --check cli/ren-graphics.mjs
       - run: node --check cli/auth.mjs
       - run: node --check cli/spotify.mjs
       - run: npm run build
