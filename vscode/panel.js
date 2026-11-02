@@ -200,6 +200,7 @@ function renderList(items){
     const input=document.createElement('input');input.className='search-input';
     input.placeholder='Search tracks…';input.setAttribute('aria-label','Search Spotify');
     input.value=lastSearch;
+    input.addEventListener('input',()=>{lastSearch=input.value;});
     input.addEventListener('keydown',event=>{
       if(event.key==='Enter'){
         lastSearch=input.value.trim();
