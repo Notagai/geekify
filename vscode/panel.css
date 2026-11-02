@@ -22,19 +22,31 @@ button:focus-visible,input:focus-visible,[role="slider"]:focus-visible{outline:3
   content:"";position:absolute;inset:0;pointer-events:none;
   border:6px solid #3e2112;box-shadow:inset 0 0 0 3px #a76538;
 }
-.pixel-icon{width:23px;height:23px;flex:none;color:inherit;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:square;stroke-linejoin:miter}
+.pixel-icon{width:20px;height:20px;display:block;flex:none;color:inherit;fill:currentColor;stroke:none;shape-rendering:crispEdges;image-rendering:pixelated}
 .desk{position:relative;z-index:1;height:100%;width:100%;min-width:0;display:flex;flex-direction:column;gap:clamp(8px,1.4vh,16px);padding:clamp(11px,2.1vw,30px);overflow:hidden}
 .desk-header{min-height:62px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex:none}
-.brand-mark{
-  display:flex;align-items:center;gap:12px;
-  padding:11px 20px 12px;
-  background:#f5cda4;border:4px solid #724022;
-  border-radius:7px 17px 6px 15px;
-  box-shadow:inset 0 3px #fff0cc,inset 3px 0 #fff0cc,4px 5px #361b11;
-  transform:rotate(-1.8deg);font-size:clamp(21px,2.7vw,32px);font-weight:900;
-  letter-spacing:-1.5px;text-shadow:1px 2px #e6a875;white-space:nowrap
+.brand-mark{position:relative;display:flex;align-items:center;flex:none;min-width:0;isolation:isolate}
+.brand-vine{
+  position:absolute;z-index:3;pointer-events:none;
+  left:-22px;top:-22px;width:97px;height:80px;
+  background-image:var(--brand-vine-image);
+  background-repeat:no-repeat;background-size:100% 100%;
+  image-rendering:pixelated;filter:drop-shadow(2px 2px 0 #2c2817)
 }
-.brand-mark .pixel-icon{width:30px;height:30px}
+.brand-badge{
+  position:relative;z-index:1;display:flex;align-items:center;gap:9px;
+  padding:9px 18px 9px 24px;min-height:58px;
+  background-color:#7d4528;
+  background-image:linear-gradient(180deg,#b2734380,#4a230e90),var(--wood-image);
+  background-repeat:no-repeat,repeat;background-size:100% 100%,256px 256px;
+  color:#fbe0b4;border:4px solid #48220e;border-radius:0;
+  box-shadow:inset 3px 3px #d08a51,inset -3px -3px #512911,5px 5px #30190d;
+  font-size:clamp(18px,1.85vw,27px);font-weight:900;
+  letter-spacing:-1px;text-shadow:2px 2px #422313;
+  white-space:nowrap;
+}
+.brand-badge .pixel-icon{width:24px;height:24px;flex:none;color:#ffe7c7}
+.brand-label{display:block;white-space:nowrap}
 .connection{
   background:#4b281b;color:#f7d6af;min-width:100px;max-width:45%;padding:9px 12px;
   font-size:clamp(12px,1.4vw,16px);border:2px solid #9b623c;
@@ -44,16 +56,26 @@ button:focus-visible,input:focus-visible,[role="slider"]:focus-visible{outline:3
 .sidebar{display:flex;flex-direction:column;min-height:0;min-width:0;position:relative;gap:12px}
 .sidebar-nav{display:flex;flex-direction:column;gap:8px;min-width:0}
 .nav-item{
-  width:100%;min-height:clamp(42px,5.8vh,62px);
-  padding:7px 11px;display:flex;align-items:center;justify-content:flex-start;gap:12px;
-  background:var(--idle-image) center/100% 100% no-repeat;
-  border:0;color:#502e1a;font-size:clamp(13px,1.5vw,18px);
-  font-weight:800;text-align:left;text-shadow:0 1px #fbe2b9;
+  position:relative;width:100%;min-height:clamp(42px,5.8vh,62px);
+  display:grid;grid-template-columns:20px minmax(0,1fr);align-items:center;
+  column-gap:10px;padding:7px 13px 7px 14px;
+  background:linear-gradient(180deg,#f4cb9d,#e9b580);
+  border:3px solid #754224;border-radius:0;overflow:hidden;
+  box-shadow:inset 3px 3px #ffdfa9,inset -3px -3px #ca8c52,2px 3px #381c0e;
+  color:#502e1a;font-size:clamp(13px,1.5vw,18px);
+  font-weight:800;text-align:left;text-shadow:1px 1px #fbe2b9;
+  image-rendering:pixelated
 }
-.nav-item:hover{filter:brightness(1.08)}
-.nav-item.selected{background-image:var(--active-image);color:#fff0d2;text-shadow:1px 2px #5e2e13}
-.nav-item .pixel-icon{width:21px;height:21px}
-.nav-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav-item:hover{background:linear-gradient(180deg,#ffe0b8,#f0bd83)}
+.nav-item.selected{
+  color:#fff0d2;background:linear-gradient(180deg,#af6534,#864520);
+  border-color:#43200f;
+  box-shadow:inset 3px 3px #d1925d,inset -3px -3px #612e12,2px 3px #30170b;
+  text-shadow:1px 2px #5b3018
+}
+.nav-item.selected .pixel-icon{color:#ffecd0}
+.nav-item .pixel-icon{width:18px;height:18px;align-self:center;justify-self:center}
+.nav-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sidebar-decor{
   flex:1;min-height:0;position:relative;
   display:flex;align-items:flex-end;justify-content:center;gap:0;overflow:hidden;
@@ -200,8 +222,8 @@ button:focus-visible,input:focus-visible,[role="slider"]:focus-visible{outline:3
 #toolbar button:disabled{opacity:.65;cursor:default}
 @media(max-width:900px){
   .workspace{grid-template-columns:minmax(135px,23%) minmax(0,1fr);gap:12px}
-  .nav-item{font-size:14px;gap:5px;padding:5px 7px}
-  .nav-item .pixel-icon{width:18px;height:18px}
+  .nav-item{font-size:13px;grid-template-columns:17px minmax(0,1fr);column-gap:7px;padding:5px 8px 5px 10px}
+  .nav-item .pixel-icon{width:16px;height:16px}
   .paper-content{font-size:16px}
   .sidebar-decor{align-items:flex-end}
   .player-panel{grid-template-columns:76px minmax(90px,1fr) minmax(205px,1.65fr);gap:10px;min-height:140px}
@@ -212,17 +234,19 @@ button:focus-visible,input:focus-visible,[role="slider"]:focus-visible{outline:3
 @media(max-width:690px){
   .desk{padding:11px;gap:9px}
   .desk-header{min-height:52px}
-  .brand-mark{font-size:20px;padding:8px 12px;border-width:3px;gap:6px}
-  .brand-mark .pixel-icon{width:24px;height:24px}
+  .brand-badge{font-size:20px;padding:7px 11px 7px 18px;gap:6px;min-height:45px;border-width:3px}
+  .brand-badge .pixel-icon{width:21px;height:21px}
+  .brand-vine{width:75px;height:65px;left:-17px;top:-19px}
   .connection{font-size:11px;padding:7px;min-width:0}
   .workspace{display:flex;flex-direction:column;gap:8px}
   .sidebar{flex:none;display:block}
   .sidebar-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
   .nav-item{
     min-width:0;min-height:37px;height:37px;font-size:12px;
-    padding:5px 7px;gap:6px
+    grid-template-columns:15px minmax(0,1fr);
+    column-gap:6px;padding:5px 8px;border-width:2px
   }
-  .nav-item .pixel-icon{width:17px;height:17px}
+  .nav-item .pixel-icon{width:15px;height:15px}
   .sidebar-decor{
     display:flex;position:relative;flex:none;min-height:0;height:52px;
     justify-content:flex-end;align-items:center;gap:4px;padding-right:12px;
@@ -263,10 +287,11 @@ button:focus-visible,input:focus-visible,[role="slider"]:focus-visible{outline:3
   .playback-tag{right:13px;bottom:9px}
 }
 @media(max-width:400px){
-  .brand-mark{font-size:16px}
-  .brand-mark .pixel-icon{width:18px}
-  .nav-item{font-size:10px;gap:4px}
-  .nav-item .pixel-icon{width:15px}
+  .brand-badge{font-size:16px;min-height:37px;padding:5px 8px 5px 13px;gap:5px}
+  .brand-badge .pixel-icon{width:18px;height:18px}
+  .brand-vine{width:58px;height:48px;left:-13px;top:-14px}
+  .nav-item{font-size:10px;grid-template-columns:13px minmax(0,1fr);column-gap:4px;padding:4px 6px}
+  .nav-item .pixel-icon{width:13px;height:13px}
   .transport-controls{gap:5px}
   .player-panel{min-height:148px}
   #toolbar button{font-size:10px;max-width:34%;padding:3px 5px}
@@ -274,8 +299,9 @@ button:focus-visible,input:focus-visible,[role="slider"]:focus-visible{outline:3
 @media(max-height:575px){
   .desk{gap:5px;padding:7px}
   .desk-header{min-height:40px}
-  .brand-mark{font-size:17px;padding:4px 8px}
-  .brand-mark .pixel-icon{height:20px;width:20px}
+  .brand-badge{font-size:17px;min-height:35px;padding:4px 8px 4px 15px}
+  .brand-badge .pixel-icon{height:18px;width:18px}
+  .brand-vine{width:60px;height:50px;left:-14px;top:-14px}
   .sidebar-nav{gap:4px}
   .nav-item{min-height:31px;height:31px}
   .player-panel{min-height:117px;padding:8px 13px}
