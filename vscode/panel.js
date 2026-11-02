@@ -167,7 +167,6 @@ function textNode(tag,cls,text){
   const node=document.createElement(tag);node.className=cls;node.textContent=text;
   return node;
 }
-let lyricSignature='';
 function renderLyrics(){
   const lines=state.lyrics||[];
   const now=advance();
