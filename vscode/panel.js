@@ -156,8 +156,9 @@ function truncate(value,max=65){const text=String(value||'');return text.length>
 function advance(){if(!state.playing)return state.progressMs||0;return Math.min(state.track?.durationMs||0,(state.progressMs||0)+(performance.now()-updatedAt));}
 function renderProgress(){
   const ratio=Math.max(0,Math.min(1,advance()/(state.track?.durationMs||1)));
-  fill.style.clipPath='inset(0 '+(100-ratio*100)+'% 0 0)';
-  knob.style.left=(242+376*ratio)+'px';
+  fill.style.width=(ratio*100)+'%';
+  knob.style.left=(ratio*100)+'%';
+  progress.setAttribute('aria-valuenow',String(Math.round(ratio*100)));
   time.textContent=msClock(advance());
   duration.textContent=msClock(state.track?.durationMs||0);
   if(activeTab==='now'&&activeSub==='lyrics')renderLyrics();
@@ -199,8 +200,13 @@ function renderList(items){
   if(activeTab==='search'){
     const input=document.createElement('input');input.className='search-input';
     input.placeholder='Search tracks…';input.setAttribute('aria-label','Search Spotify');
+    input.value=lastSearch;
     input.addEventListener('keydown',event=>{
-      if(event.key==='Enter'){send('search',{query:input.value.trim()});input.blur();}
+      if(event.key==='Enter'){
+        lastSearch=input.value.trim();
+        send('search',{query:lastSearch});
+        input.blur();
+      }
     });
     paper.append(input);
   }
@@ -217,23 +223,25 @@ function renderList(items){
   if(!items?.length)list.append(textNode('p','secondary','No tracks here yet.'));
 }
 function redraw(){
-  navButtons.forEach(({id,button,skin})=>{
-    button.classList.toggle('selected',id===activeTab);
-    skin.src=assets[id===activeTab?'sidebar/button-active':'sidebar/button-idle'];
+  navButtons.forEach(({id,button})=>{
+    const selected=id===activeTab;
+    button.classList.toggle('selected',selected);
+    button.setAttribute('aria-current',selected?'page':'false');
   });
-  subButtons.forEach(({id,button,skin})=>{
-    button.style.display=activeTab==='now'?'flex':'none';
-    skin.style.display=activeTab==='now'?'':'none';
-    skin.src=assets[id===activeSub?'paper/tab-active':'paper/tab-inactive'];
+  tabs.hidden=activeTab!=='now';
+  subButtons.forEach(({id,button})=>{
+    const selected=id===activeSub&&activeTab==='now';
+    button.classList.toggle('selected',selected);
+    button.setAttribute('aria-pressed',String(selected));
   });
   const song=state.track||{};
-  title.textContent=truncate(song.title||'Nothing playing',25);
-  artist.textContent=truncate(song.artist||'Search Spotify to begin',29);
+  title.textContent=truncate(song.title||'Nothing playing',50);
+  artist.textContent=truncate(song.artist||'Search Spotify to begin',55);
   cover.src=song.imageUrl&&/^https:\/\/(?:i\.scdn\.co|mosaic\.scdn\.co|[a-z0-9.-]+\.spotifycdn\.com|[a-z0-9.-]+\.spotify\.com)\//i.test(song.imageUrl)
     ?song.imageUrl:assets['player/default-cover'];
   connection.textContent=state.demo?'● Demo':'● Spotify';
   tag.textContent=state.demo?'DEMO':'LIVE';
-  playGlyph.textContent=state.playing?'':'▶';
+  transportButtons.pause.replaceChildren(icon(state.playing?'pause':'play'));
   transportButtons.pause.setAttribute('aria-label',state.playing?'Pause':'Play');
   if(activeTab==='now'){
     if(activeSub==='lyrics'){lyricSignature='';renderLyrics();}
@@ -248,7 +256,10 @@ function redraw(){
     paper.append(textNode('h2','title-line','SETTINGS'));
     paper.append(textNode('p','note','Run geekify login to authorize Spotify with streaming access.'));
     paper.append(textNode('p','secondary','The VS Code panel may not support protected playback. Use Spotify web player when needed.'));
-  }else renderList(activeTab==='devices'||activeTab==='search'||activeTab==='library'||activeTab==='playlists'?state.items:[]);
+  }else renderList(
+    state.browseType===activeTab||(activeTab==='playlists'&&state.browseType==='playlist')
+      ?state.items:[]
+  );
   renderProgress();
 }
 document.getElementById('openWeb').addEventListener('click',()=>send('openWeb'));
