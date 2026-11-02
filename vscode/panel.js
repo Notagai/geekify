@@ -329,4 +329,3 @@ window.addEventListener('message',event=>{
 });
 setInterval(renderProgress,350);
 vscode.postMessage({type:'ready'});
-layout();
