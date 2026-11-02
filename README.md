@@ -2,6 +2,26 @@
 
 Your Spotify controller, inside the VS Code terminal. Also includes a pixel-art website designed for vibe.notagai.com.
 
+## Experimental high-detail Ren (branch only)
+
+The experiment/ren-pixel-bob branch includes an **image-rendered terminal app**, not an Electron window or VS Code extension. WezTerm is the recommended host because it implements the iTerm2 inline image protocol. The entire textured 1024×576 wood-and-paper interface is rasterized as PNG frames, then shown in the terminal's alternate screen. Ren has a multi-colour pixel sprite with two bobbing frames.
+
+Install [WezTerm](https://wezterm.org/), open its terminal and run:
+
+    git fetch origin
+    git switch experiment/ren-pixel-bob
+    npm install
+    npm link
+    geekify demo --ren
+
+Press **Space** to play the demo timer and watch Ren bob. Use **q** to exit. To connect your actual Spotify session, use `geekify login`, then `geekify --ren`. The old text UI remains `geekify`, and the original small Ren ANSI experiment is available as `geekify --ren-ansi` or `geekify demo --ren-ansi`.
+
+**Controls:** click the sidebar tabs or player buttons; click Ren for a reaction; click library rows to open/play; use 1–5 for tabs, Space for playback, n/p for next/previous, / to search, arrows/j/k and Enter for list navigation, PgUp/PgDn for pages, and q to exit. Spotify itself still produces all audio. Demo mode has no audio.
+
+**Terminal compatibility:** normal PowerShell or Windows Terminal alone cannot guarantee this graphics protocol. For a VS Code terminal with `"terminal.integrated.enableImages": true`, try `geekify --ren --force-images`. This is experimental, and the same image-drawing technique might not behave correctly in every terminal. If a terminal doesn't support inline images, Geekify refuses to emit unreadable escape garbage; use the ANSI fallback. There is no need to install a VS Code extension or open a browser.
+
+Images are rendered by Sharp and transmitted with iTerm2 OSC 1337 using the WezTerm doNotMoveCursor=1 extension. Current proof-of-concept redraws a PNG every 400ms rather than true beat detection, so bobbing is timer-based, and resizing can stretch the scene. Search, liked tracks, playlists, devices and playback control use the existing Spotify API client. No AI calls are made.
+
 ## Quick start: launch Geekify from anywhere
 
 Requires Node.js 20 or newer.
