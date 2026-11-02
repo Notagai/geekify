@@ -22,3 +22,4 @@ jobs:
       - run: node --check cli/auth.mjs
       - run: node --check cli/spotify.mjs
       - run: npm run build
+      - run: npm run extension:package
