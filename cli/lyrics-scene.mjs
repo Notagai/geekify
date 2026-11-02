@@ -156,6 +156,7 @@ export function sceneSvg(state={},assets={}){
   out+=R(18,14,1166,102,'#6d3e24',4,'#8d5934',2);
   out+=R(26,23,244,81,'#f0d5a8',1,'#6a3c22',4);
   out+=P('M26 23 L259 19 L268 91 L26 104Z','#f1d7aa','#a16d41',2);
+  out+=I(assets.sticky,26,21,243,83);
   out+=T(45,75,'♫ geekify.',33,'#4d2d1b',800);
   out+=T(888,59,'your music desk',17,'#efd6ac',500);
   out+=R(1049,35,117,39,'#583422',2,'#a77343',2);
@@ -176,6 +177,11 @@ export function sceneSvg(state={},assets={}){
     out+=listView(state);
   }
   out+=bottomPlayer(state);
+  if(state.searchActive){
+    out+=R(342,208,745,80,'#fff2d9',5,'#966b43',4);
+    out+=T(363,255,'SEARCH / '+shorten(state.query||'',48)+'_',23,'#4c3020',700);
+  }
+  if(state.status)out+=T(299,535,shorten(state.status,90),12,'#f0d2ab',600);
   out+='</svg>';
   return out;
 }
