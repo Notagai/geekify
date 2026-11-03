@@ -362,3 +362,17 @@ button,input{letter-spacing:.015em;}
   .player-panel{grid-template-columns:80px minmax(0,1fr);}
   .folder-icon{width:31px;height:31px;}
 }
+
+.sidebar-decor{pointer-events:auto;overflow:visible;}
+.decor-interactive{background:transparent;border:0;padding:0;cursor:pointer;transition:transform 180ms steps(3,end),filter 180ms;}
+.decor-interactive:hover{transform:translateY(-5px) rotate(-3deg);filter:brightness(1.08);}
+.decor-interactive.touched{transform:translate(5px,-7px) rotate(6deg);}
+.player-panel{z-index:4;overflow:visible;}
+.album-art-frame{position:relative;cursor:zoom-in;z-index:2;overflow:visible;transform-origin:left bottom;transition:transform 180ms steps(4,end);}
+.album-art-frame.expanded{transform:scale(2);z-index:20;cursor:zoom-out;box-shadow:6px 8px 0 #75412a;}
+.album-art-frame .album-art{pointer-events:none;}
+.search-shortcuts{display:flex;gap:9px;flex-wrap:wrap;margin:4px 0 10px;}
+.search-shortcut{padding:7px 11px;background:#e9bd8d;color:#50301e;border:2px solid #95623e;font-weight:800;}
+.search-shortcut:hover{background:#f5d5aa;}
+@media(max-width:690px){.album-art-frame.expanded{transform:scale(1.7);}}
+@media(prefers-reduced-motion:reduce){.decor-interactive,.album-art-frame{transition:none;}}
