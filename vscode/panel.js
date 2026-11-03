@@ -579,8 +579,14 @@ function renderList(items){
     else button.addEventListener('click',()=>send('openResult',{uri:item.uri}));
     list.append(row);
   });
+  if(activeTab==='library'&&state.browseType==='playlist'&&state.browseError){
+    list.append(textNode('p','note','Could not load all playlist tracks: '+state.browseError));
+    button('setting-control',list,'Retry playlist tracks',()=>send('playlist',{id:state.playlistId}));
+  }
   if(!items?.length&&!(activeTab==='library'&&state.browseType==='library-playlists'))
-    list.append(textNode('p','secondary','No tracks here yet.'));
+    list.append(textNode('p','secondary',
+      activeTab==='library'&&state.browseType==='playlist'?'No playable tracks returned for this playlist.':
+      activeTab==='devices'?'No devices returned by Spotify.':'No tracks here yet.'));
 }
 function managementSong(item,idx,planned){
   const row=textNode('div','management-song','');
