@@ -225,6 +225,8 @@ async function openPanel(context,forceDemo=false){
         const payload=await api.allPlaylistItems(playlist.id);
         playlistRowsReceived=payload.items.length;
         response=spotify.playlistTrackItems(payload);
+        if(playlistRowsReceived&&!response.length)
+          browseError='Spotify entry structure: '+spotify.playlistEntryShape(payload)+' (source: '+(payload.source||'unknown')+')';
       }catch(error){
         if(requestId!==browseRequestId)return;
         browseError=safeError(error);
