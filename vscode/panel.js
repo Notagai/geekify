@@ -525,7 +525,9 @@ function renderList(items){
       const arrow=textNode('span','folder-chevron','');arrow.append(icon('chevron'));button.append(arrow);
     }
     if(item.type==='track'&&activeTab!=='management'){
-      const add=button('queue-add',button,'+ Queue',()=>send('planTrack',{uri:item.uri}));
+      const add=button('queue-add',button,'+ Queue',(event)=>{
+        event?.stopPropagation?.();send('planTrack',{uri:item.uri});
+      });
       add.title='Add to Geekify play-next plan';
     }
     if(item.type==='folder')button.addEventListener('click',()=>send('libraryFolder',{id:item.id}));
