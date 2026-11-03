@@ -7,7 +7,7 @@ import vm from 'node:vm';
 test('responsive player bootstraps and renders state with a mocked VS Code DOM',()=>{
   class Element{
     constructor(tag='div'){
-      this.tag=tag;this.children=[];this.attrs={};this.handlers={};
+      this.tag=tag;this.className='';this.children=[];this.attrs={};this.handlers={};
       this.style={setProperty(name,value){this[name]=value;}};
       this.classList={toggle(){},add(){},remove(){}};
       this.textContent='';this.src='';this.value='';this.hidden=false;this.dataset={};this.scrollTop=0;
