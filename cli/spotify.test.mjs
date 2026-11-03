@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { describeSpotifyFailure, SpotifyApi, trackInfo, playlistTrackItems } from './spotify.mjs';
+import { describeSpotifyFailure, SpotifyApi, trackInfo, playlistTrackItems, playlistEntryShape } from './spotify.mjs';
 
 test('403 errors retain the reason and action-specific diagnosis',()=>{
   const premium=describeSpotifyFailure(403,'PREMIUM_REQUIRED','Player command failed: Premium required','PUT','/me/player/play');
@@ -105,4 +105,22 @@ test('playlist-track pagination rejects malformed responses',async()=>{
   const api=new SpotifyApi();
   api.playlistItems=async()=>null;
   await assert.rejects(api.allPlaylistItems('123'),/invalid playlist tracks response/);
+});
+
+test('metadata-only playlist items retry the legacy track endpoint',async()=>{
+  const api=new SpotifyApi();
+  api.playlistItems=async()=>({items:Array.from({length:12},()=>({item:{type:'track'}})),next:null});
+  let legacyCalls=0;
+  api.legacyPlaylistItems=async()=>{legacyCalls++;return {items:[{track:{id:'0123456789abcdef',name:'Recovered song',artists:[{name:'Artist'}]}}],next:null};};
+  const result=await api.allPlaylistItems('playlist123');
+  assert.equal(legacyCalls,1);
+  assert.equal(result.source,'tracks');
+  assert.equal(playlistTrackItems(result).length,1);
+  assert.equal(trackInfo(playlistTrackItems(result)[0]).uri,'spotify:track:0123456789abcdef');
+});
+test('playlist shape diagnostics contain no names or IDs',()=>{
+  const summary=playlistEntryShape({items:[{item:{name:'Private title',id:'private123',uri:'spotify:track:private123'}},{track:{type:'episode'}}]});
+  assert.match(summary,/item: 1/);
+  assert.match(summary,/track: 1/);
+  assert.doesNotMatch(summary,/Private title|private123/);
 });
