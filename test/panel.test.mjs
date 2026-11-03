@@ -119,7 +119,7 @@ test('device status, search shortcuts and expandable art implemented',()=>{
  assert.ok(ext.includes('deviceName,deviceRestricted,deviceId:'));
  assert.ok(ext.includes("type==='recent'"));
  assert.ok(ext.includes("type==='daily'"));
- assert.ok(ui.includes("send('daily')"));
+ assert.ok(ui.includes("send(lastSearch?'search':'daily'"));
  assert.ok(ui.includes("send('recent')"));
  assert.ok(ui.includes("Expand playing song cover"));
  assert.ok(css.includes('.album-art-frame.expanded{transform:scale(2)'));
@@ -132,7 +132,7 @@ test('management, VT323 and stable lyric size are wired',()=>{
  const html=readFileSync(resolve(root,'vscode/panel.html'),'utf8');
  const api=readFileSync(resolve(root,'cli/spotify.mjs'),'utf8');
  assert.ok(ui.includes("['management','Management']"));
- assert.ok(ui.includes("vscode.setState?.("));
+ assert.ok(ext.includes("writeFileSync(settingsPath,"));
  assert.ok(ui.includes("renderManagement()"));
  assert.ok(ui.includes("renderSettings()"));
  assert.ok(ext.includes("planned.push("));
