@@ -526,7 +526,14 @@ function renderList(items){
     paper.append(input);
   }
   const list=textNode('div','list','');paper.append(list);
-  (items||[]).slice(0,25).forEach(item=>{
+  if(activeTab==='library'&&state.browseType==='library-playlists'&&!(items||[]).length){
+    const message=state.browseError
+      ?'Could not load playlists: '+state.browseError
+      :'No playlists returned by Spotify. Check that this is the correct Spotify account.';
+    list.append(textNode('p','note',message));
+    button('setting-control',list,'Retry loading playlists',()=>send('libraryFolder',{id:'playlists'}));
+  }
+  (items||[]).forEach(item=>{
     const row=textNode('div','item-row','');
     const button=textNode('button','item','');
     button.type='button';row.append(button);
