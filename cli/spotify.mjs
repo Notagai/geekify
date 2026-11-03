@@ -62,18 +62,25 @@ export class SpotifyApi {
   async recent(){return this.request('/me/player/recently-played',{query:{limit:30}});}
   async saved(offset=0){return this.request('/me/tracks',{query:{limit:25,offset}});}
   async playlists(offset=0){return this.request('/me/playlists',{query:{limit:50,offset}});}
-  async allPlaylists(maxPages=10){
-    // Spotify paginates this endpoint. A single request silently hides most
-    // libraries; cap traversal so a broken paging response cannot loop forever.
+  async allPlaylists(maxPages=10,onPage=()=>{}){
+    // Each successful page should remain visible even if Spotify rejects a
+    // later offset. Do not follow the returned next URL: Spotify has returned
+    // obsolete /users/{id}/playlists URLs on this endpoint.
     const all=[];
     let offset=0;
     for(let page=0;page<maxPages;page++){
-      const response=await this.playlists(offset);
-      if(!response||!Array.isArray(response.items)){
-        throw new Error('Spotify returned an invalid playlists response.');
+      let response;
+      try{
+        response=await this.playlists(offset);
+        if(!response||!Array.isArray(response.items))
+          throw new Error('Spotify returned an invalid playlists response.');
+      }catch(error){
+        if(all.length)error.partialItems=all;
+        throw error;
       }
       all.push(...response.items.filter(item=>item&&typeof item.id==='string'));
-      const nextOffset=Number(response.offset??offset)+response.items.length;
+      onPage([...all]);
+      const nextOffset=Number(response.offset??offset)+Number(response.limit||50);
       if(!response.next||response.items.length===0||nextOffset<=offset)break;
       offset=nextOffset;
     }
