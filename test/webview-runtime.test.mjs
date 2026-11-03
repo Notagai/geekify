@@ -40,7 +40,8 @@ test('responsive player bootstraps and renders state with a mocked VS Code DOM',
     document:{
       getElementById:id=>ids.get(id)||new Element(),
       createElement:tag=>new Element(tag),
-      createElementNS:(_ns,tag)=>new Element(tag)
+      createElementNS:(_ns,tag)=>new Element(tag),
+      addEventListener:()=>{},hidden:false
     },
     window:{addEventListener:(event,fn)=>listeners[event]=fn},
     performance:{now:()=>1000},
