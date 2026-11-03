@@ -315,14 +315,19 @@ async function openPanel(context,forceDemo=false){
     if(name==='playPlaylist'){
       if(!playlist?.id||!/^[A-Za-z0-9]+$/.test(playlist.id))
         throw new Error('Open a playlist before playing it.');
-      if(deviceRestricted)throw new Error('This Spotify device blocks remote playback.');
+      const targetDevice=typeof message.deviceId==='string'&&/^[A-Za-z0-9]+$/.test(message.deviceId)
+        ?message.deviceId:device();
+      if(deviceRestricted&&!message.deviceId)
+        throw new Error('This Spotify device blocks remote playback. Activate Geekify audio or switch devices.');
+      if(!targetDevice)
+        throw new Error('No Spotify playback device is ready. Wait for the Geekify in-panel player to connect, then click Play playlist. If it stays unavailable, this VS Code webview may not support Spotify protected playback.');
       const context='spotify:playlist:'+playlist.id;
       // A clicked song starts the playlist context at that song, rather than
       // playing the track alone and discarding the playlist sequence.
       const selected=items.find(x=>x.type==='track'&&x.uri===message.uri);
       if(selected){
-        await api.playPlaylist(context,selected.uri,device());
-      }else await api.playUri(context,device());
+        await api.playPlaylist(context,selected.uri,targetDevice);
+      }else await api.playUri(context,targetDevice);
       return;
     }
     if(name==='planTrack'){
