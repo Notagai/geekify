@@ -164,19 +164,37 @@ async function openPanel(context,forceDemo=false){
     }
   }
   function device(){return playback?.device?.id||undefined;}
-  async function browse(type,query){
+  async function browse(type,query,source='spotify'){
     const requestId=++browseRequestId;
     browseError='';browseLoading=false;
     if(type==='playlist')playlistRowsReceived=0;
     if(demo){notice='Log in with geekify login to browse Spotify.';emit();return;}
     let response;
     if(type==='search'||type==='daily'){
-      const q=type==='daily'||!String(query||'').trim()?'Daily Mix':String(query||'').trim().slice(0,100);
-      const result=await api.search(q);
+      const q=String(query||'').trim().slice(0,100);
       response=[];
-      for(const [key,kind] of [['tracks','track'],['albums','album'],['artists','artist'],['playlists','playlist'],['shows','show'],['episodes','episode']]){
-        if(type==='daily'&&kind!=='playlist')continue;
-        for(const entry of result?.[key]?.items||[])if(entry)response.push({...entry,_kind:kind});
+      browseType='search';browseLoading=true;items=[];emit();
+      if(source==='library'){
+        // Search the user's own saved collection, not public Spotify results.
+        const [playlists,liked]=await Promise.allSettled([api.allPlaylists(),api.saved()]);
+        if(playlists.status==='fulfilled'){
+          for(const p of playlists.value)if(p?.name?.toLocaleLowerCase().includes(q.toLocaleLowerCase()))
+            response.push({...p,_kind:'playlist'});
+        }
+        if(liked.status==='fulfilled'){
+          for(const row of liked.value?.items||[]){
+            const t=row?.track;
+            if(t&&[t.name,...(t.artists||[]).map(a=>a.name)].join(' ').toLocaleLowerCase().includes(q.toLocaleLowerCase()))
+              response.push(t);
+          }
+        }
+        if(playlists.status==='rejected'&&liked.status==='rejected')
+          throw new Error('Spotify could not load your saved library.');
+      }else if(q){
+        const result=await api.search(q);
+        for(const [key,kind] of [['tracks','track'],['albums','album'],['artists','artist'],['playlists','playlist'],['shows','show'],['episodes','episode']]){
+          for(const entry of result?.[key]?.items||[])if(entry)response.push({...entry,_kind:kind});
+        }
       }
     }
     else if(type==='recent')response=(await api.recent())?.items?.map(row=>row.track).filter(Boolean)||[];
@@ -241,7 +259,8 @@ async function openPanel(context,forceDemo=false){
     }
     // A slower previous request must never replace a newer Library view.
     if(requestId!==browseRequestId)return;
-    browseType=type;
+    browseType=type==='daily'?'search':type;
+    browseLoading=false;
     items=response.map(item=>{
       if(type==='devices')return {type:'device',id:item.id,title:item.name,subtitle:(item.is_active?'Active':'Available')+(item.is_restricted?' · Restricted':'')};
       if(item._kind&&item._kind!=='track')return {type:item._kind,id:item.id,uri:item.uri,title:item.name||'Untitled',
@@ -302,7 +321,7 @@ async function openPanel(context,forceDemo=false){
       return;
     }
     if(name==='search'||name==='daily'||name==='recent'||name==='library'||name==='devices'||name==='queue'||name==='management'){
-      await browse(name,message.query);return;
+      await browse(name,message.query,message.source);return;
     }
     if(name==='retryPlaylist'){
       if(playlist)await browse('playlist');
