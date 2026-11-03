@@ -17,7 +17,7 @@ const DEMO_LYRICS=[
   {timeMs:112000,text:'the city keeps glowing'}
 ];
 const allowedActions=new Set(['toggle','next','previous','seek','save','shuffle','repeat',
-  'playItem','openResult','togglePin','lyricsSize','planTrack','movePlanned','removePlanned','submitPlan','management','transfer','search','daily','recent','library','libraryFolder','libraryBack','playlist','devices','queue','openWeb','refresh']);
+  'playItem','openResult','togglePin','lyricsSize','planTrack','movePlanned','removePlanned','submitPlan','management','transfer','search','daily','recent','library','libraryFolder','libraryBack','playlist','retryPlaylist','devices','queue','openWeb','refresh']);
 const safeError=e=>String(e?.message||e).replace(/[\x00-\x1f\x7f-\x9f]/g,' ').slice(0,175);
 
 let activePanel;
@@ -82,6 +82,7 @@ async function openPanel(context,forceDemo=false){
   let playback=null,repeat='off',shuffle=false,deviceName='',deviceRestricted=false;
   let controlBusy=false,lastControlAt=0;
   let queue=[],items=[],browseType='',playlist=null,notice='',browseError='',browseLoading=false,planned=[];
+  let browseRequestId=0;
   const settingsPath=join(homedir(),'.geekify','settings.json');
   function readSettings(){
     try{const data=JSON.parse(readFileSync(settingsPath,'utf8'));
@@ -164,7 +165,8 @@ async function openPanel(context,forceDemo=false){
   }
   function device(){return playback?.device?.id||undefined;}
   async function browse(type,query){
-    browseError='';
+    const requestId=++browseRequestId;
+    browseError='';browseLoading=false;
     if(demo){notice='Log in with geekify login to browse Spotify.';emit();return;}
     let response;
     if(type==='search'||type==='daily'){
@@ -193,6 +195,7 @@ async function openPanel(context,forceDemo=false){
       browseType=type;items=[];browseLoading=true;emit();
       try{
         response=await api.allPlaylists(10,page=>{
+          if(requestId!==browseRequestId)return;
           items=page.map(item=>({
             type:'playlist',id:item.id,title:item.name||'Untitled playlist',
             subtitle:(item.items?.total??item.tracks?.total??'Unknown number of')+' tracks',
@@ -202,6 +205,7 @@ async function openPanel(context,forceDemo=false){
           emit();
         });
       }catch(error){
+        if(requestId!==browseRequestId)return;
         browseError=safeError(error);
         const partial=Array.isArray(error.partialItems)?error.partialItems:[];
         // Keep successful pages rather than replacing them with an empty screen.
@@ -212,14 +216,25 @@ async function openPanel(context,forceDemo=false){
             imageUrl:item.images?.[0]?.url||''}));
         browseLoading=false;emit();return;
       }
+      if(requestId!==browseRequestId)return;
       browseLoading=false;
     }
-    else if(type==='playlist')response=spotify.playlistTrackItems(await api.playlistItems(playlist.id));
+    else if(type==='playlist'){
+      try{
+        response=spotify.playlistTrackItems(await api.allPlaylistItems(playlist.id));
+      }catch(error){
+        if(requestId!==browseRequestId)return;
+        browseError=safeError(error);
+        response=spotify.playlistTrackItems({items:error.partialItems||[]});
+      }
+    }
     else if(type==='devices')response=(await api.devices())?.devices||[];
     else if(type==='management'||type==='queue'){
       queue=(await api.queue())?.queue?.slice(0,5).map(spotify.trackInfo).filter(Boolean)||[];
       browseType='management';emit();return;
     }
+    // A slower previous request must never replace a newer Library view.
+    if(requestId!==browseRequestId)return;
     browseType=type;
     items=response.map(item=>{
       if(type==='devices')return {type:'device',id:item.id,title:item.name,subtitle:(item.is_active?'Active':'Available')+(item.is_restricted?' · Restricted':'')};
@@ -271,12 +286,16 @@ async function openPanel(context,forceDemo=false){
       return;
     }
     if(name==='libraryBack'){
-      if(browseType==='playlist')await browse('library');
+      if(browseType==='playlist')await browse('library-playlists');
       else await browse('library');
       return;
     }
     if(name==='search'||name==='daily'||name==='recent'||name==='library'||name==='devices'||name==='queue'||name==='management'){
       await browse(name,message.query);return;
+    }
+    if(name==='retryPlaylist'){
+      if(playlist)await browse('playlist');
+      return;
     }
     if(name==='playlist'){
       const selected=items.find(x=>x.type==='playlist'&&x.id===message.id);
@@ -353,8 +372,9 @@ async function openPanel(context,forceDemo=false){
           try{await api.playPause(!target,targetDevice);lastError=null;}
           catch(error){
             lastError=error;
-            if(error?.status===429||error?.status===401||error?.status===403&&
-              !/restriction violated/i.test(String(error.message)))break;
+            // Authentication, restrictions and rate limits cannot be fixed
+            // by immediately sending the same command again.
+            if([401,403,429].includes(error?.status))break;
           }
           await new Promise(resolve=>setTimeout(resolve,attempt===0?450:650));
           const observed=await api.playback();

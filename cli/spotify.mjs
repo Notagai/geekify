@@ -96,6 +96,26 @@ export class SpotifyApi {
       return this.request(path+'/tracks',{query:{limit:50,offset}});
     }
   }
+  async allPlaylistItems(id,maxPages=10){
+    const all=[];
+    let offset=0;
+    for(let page=0;page<maxPages;page++){
+      let response;
+      try{
+        response=await this.playlistItems(id,offset);
+        if(!response||!Array.isArray(response.items))
+          throw new Error('Spotify returned an invalid playlist tracks response.');
+      }catch(error){
+        if(all.length)error.partialItems=all;
+        throw error;
+      }
+      all.push(...response.items);
+      const nextOffset=Number(response.offset??offset)+Number(response.limit||50);
+      if(!response.next||!response.items.length||nextOffset<=offset)break;
+      offset=nextOffset;
+    }
+    return {items:all};
+  }
   async devices(){return this.request('/me/player/devices');}
   async playPause(playing,deviceId){return this.request('/me/player/'+(playing?'pause':'play'),{method:'PUT',query:deviceId?{device_id:deviceId}:undefined});}
   async next(deviceId){return this.request('/me/player/next',{method:'POST',query:deviceId?{device_id:deviceId}:undefined});}
