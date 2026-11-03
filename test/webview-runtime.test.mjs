@@ -10,10 +10,13 @@ test('responsive player bootstraps and renders state with a mocked VS Code DOM',
       this.tag=tag;this.children=[];this.attrs={};this.handlers={};
       this.style={setProperty(name,value){this[name]=value;}};
       this.classList={toggle(){},add(){},remove(){}};
-      this.textContent='';this.src='';this.value='';this.hidden=false;this.dataset={};
+      this.textContent='';this.src='';this.value='';this.hidden=false;this.dataset={};this.scrollTop=0;
     }
     append(...nodes){this.children.push(...nodes);}
     replaceChildren(...nodes){this.children=[...nodes];}
+    insertBefore(node,reference){const index=this.children.indexOf(reference);if(index<0)this.children.push(node);else this.children.splice(index,0,node);}
+    querySelectorAll(selector){const result=[];const cls=selector.startsWith('.')?selector.slice(1):null;const visit=node=>{for(const child of node.children){if(cls&&child.className?.split(' ').includes(cls))result.push(child);visit(child);}};visit(this);return result;}
+    querySelector(selector){return this.querySelectorAll(selector)[0]||null;}
     setAttribute(name,value){this.attrs[name]=value;}
     getAttribute(name){return this.attrs[name]||null;}
     addEventListener(type,fn){this.handlers[type]=fn;}
@@ -102,4 +105,24 @@ test('responsive player bootstraps and renders state with a mocked VS Code DOM',
   assert.equal(collect(uiRoot,node=>node.className==='pin-playlist').length,68);
   const firstRow=collect(uiRoot,node=>node.className==='item-row')[0];
   assert.ok(firstRow.children[0].handlers.click,'playlist must be clickable');
+  const paper=walk(uiRoot,node=>node.className==='paper-content');
+  const list=paper.querySelector('.list');
+  const searchInput=paper.querySelector('.playlist-search');
+  assert.ok(searchInput,'playlist search field exists');
+  paper.scrollTop=320;list.scrollTop=180;
+  searchInput.value='My Playlist 42';
+  searchInput.handlers.input();
+  assert.equal(list.querySelectorAll('.item-row').filter(row=>!row.hidden).length,1);
+  assert.equal(list.querySelectorAll('.item-row').filter(row=>!row.hidden)[0].dataset.searchText.includes('42'),true);
+  assert.doesNotThrow(()=>listeners.message({data:{
+    type:'state',demo:false,track:null,playing:false,progressMs:1500,
+    lyricsStatus:'missing',lyrics:[],items:playlists,
+    browseType:'library-playlists',browseLoading:false,browseError:'',
+    pinned:[],queue:[],canStream:false
+  }}));
+  assert.equal(paper.scrollTop,320,'paper scroll should survive a playback update');
+  assert.equal(paper.querySelector('.list').scrollTop,180,'playlist scroll should survive a playback update');
+  assert.equal(paper.querySelector('.playlist-search').value,'My Playlist 42','search persists through playback updates');
+  assert.equal(paper.querySelector('.list').querySelectorAll('.item-row').filter(row=>!row.hidden).length,1);
+
 });
