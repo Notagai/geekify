@@ -119,7 +119,7 @@ test('device status, search shortcuts and expandable art implemented',()=>{
  assert.ok(ext.includes('deviceName,deviceRestricted,deviceId:'));
  assert.ok(ext.includes("type==='recent'"));
  assert.ok(ext.includes("type==='daily'"));
- assert.ok(ui.includes("send(lastSearch?'search':'daily'"));
+ assert.ok(ui.includes("send('search',{query:lastSearch"));
  assert.ok(ui.includes("send('recent')"));
  assert.ok(ui.includes("Expand playing song cover"));
  assert.ok(css.includes('.album-art-frame.expanded{transform:scale(2)'));
@@ -173,7 +173,7 @@ test('settings file, default lyric size, pinned playlists and scrolling renderer
  assert.ok(ui.includes("button('playlist-more',actions,"));
  assert.ok(ui.includes("showPlaylistMenu(item,menuButton)"));
  assert.ok(ui.includes("button('queue-add',row,"));
- assert.ok(ui.includes("send(lastSearch?'search':'daily'"));
+ assert.ok(ui.includes("send('search',{query:lastSearch"));
  assert.ok(ui.includes("player.classList.toggle('cover-expanded'"));
  assert.ok(css.includes('.player-panel.cover-expanded'));
 });
