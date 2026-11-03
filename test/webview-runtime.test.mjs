@@ -20,9 +20,12 @@ test('responsive player bootstraps and renders state with a mocked VS Code DOM',
     setAttribute(name,value){this.attrs[name]=value;}
     getAttribute(name){return this.attrs[name]||null;}
     addEventListener(type,fn){this.handlers[type]=fn;}
-    getBoundingClientRect(){return {left:0,width:200};}
+    getBoundingClientRect(){return {left:0,right:200,top:20,bottom:54,width:200};}
+    remove(){this.removed=true;}
+    contains(node){return node===this||this.children.some(child=>child.contains?.(node));}
     blur(){}
   }
+  const body=new Element('body');
   const ids=new Map();
   for(const id of ['assets','board','audioStatus','listenHere','openWeb'])
     ids.set(id,new Element());
@@ -40,13 +43,13 @@ test('responsive player bootstraps and renders state with a mocked VS Code DOM',
   const script=readFileSync(resolve(root,'vscode/panel.js'),'utf8');
   const calls=[],listeners={};
   const context={
-    document:{
+    document:{body,
       getElementById:id=>ids.get(id)||new Element(),
       createElement:tag=>new Element(tag),
       createElementNS:(_ns,tag)=>new Element(tag),
       addEventListener:()=>{},hidden:false
     },
-    window:{addEventListener:(event,fn)=>listeners[event]=fn},
+    window:{innerWidth:1024,innerHeight:768,addEventListener:(event,fn)=>listeners[event]=fn},
     performance:{now:()=>1000},
     setInterval:()=>0,
     acquireVsCodeApi:()=>({postMessage:message=>calls.push(message)})
@@ -105,7 +108,7 @@ test('responsive player bootstraps and renders state with a mocked VS Code DOM',
   assert.equal(collect(uiRoot,node=>node.className==='playlist-more').length,68);
   const menuButton=collect(uiRoot,node=>node.className==='playlist-more')[0];
   menuButton.handlers.click();
-  const menuAction=collect(uiRoot,node=>node.className==='playlist-menu-action')[0];
+  const menuAction=collect(body,node=>node.className.includes('playlist-menu-action'))[0];
   assert.equal(menuAction.textContent,'Pin');
   menuAction.handlers.click();
   assert.ok(calls.some(call=>call.name==='togglePin'&&call.id==='playlist0'));
@@ -117,13 +120,21 @@ test('responsive player bootstraps and renders state with a mocked VS Code DOM',
     pinned:[{id:'playlist0',title:'My Playlist 0'}],queue:[],canStream:false
   }});
   collect(uiRoot,node=>node.className==='playlist-more')[0].handlers.click();
-  const unpin=collect(uiRoot,node=>node.className==='playlist-menu-action')[0];
+  const unpin=collect(body,node=>node.className.includes('playlist-menu-action')).at(-1);
   assert.equal(unpin.textContent,'Unpin');
   const before=calls.filter(call=>call.name==='togglePin').length;
   unpin.handlers.click();
   assert.equal(unpin.textContent,'Confirm unpin');
+  // Spotify polling must not close the confirmation menu.
+  listeners.message({data:{
+    type:'state',demo:false,track:null,playing:false,progressMs:900,
+    lyricsStatus:'missing',lyrics:[],items:playlists,
+    browseType:'library-playlists',browseLoading:false,browseError:'',
+    pinned:[{id:'playlist0',title:'My Playlist 0'}],queue:[],canStream:false
+  }});
+  assert.equal(collect(body,node=>node.className.includes('playlist-menu-action')).at(-1).textContent,'Confirm unpin');
   assert.equal(calls.filter(call=>call.name==='togglePin').length,before);
-  unpin.handlers.click();
+  collect(body,node=>node.className.includes('playlist-menu-action')).at(-1).handlers.click();
   assert.equal(calls.filter(call=>call.name==='togglePin').length,before+1);
   const firstRow=collect(uiRoot,node=>node.className==='item-row')[0];
   assert.ok(firstRow.children[0].handlers.click,'playlist must be clickable');
