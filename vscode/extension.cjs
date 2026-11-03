@@ -81,7 +81,7 @@ async function openPanel(context,forceDemo=false){
   let lyrics=demo?DEMO_LYRICS:[],lyricsStatus=demo?'synced':'missing';
   let playback=null,repeat='off',shuffle=false,deviceName='',deviceRestricted=false;
   let controlBusy=false,lastControlAt=0;
-  let queue=[],items=[],browseType='',playlist=null,notice='',planned=[];
+  let queue=[],items=[],browseType='',playlist=null,notice='',browseError='',planned=[];
   const settingsPath=join(homedir(),'.geekify','settings.json');
   function readSettings(){
     try{const data=JSON.parse(readFileSync(settingsPath,'utf8'));
@@ -97,7 +97,7 @@ async function openPanel(context,forceDemo=false){
   function emit(){
     const scopes=String(auth.loadConfig().token?.scope||'').split(/\s+/);
     send({type:'state',demo,track,playing,progressMs,lyrics,lyricsStatus,
-      queue,planned,items,browseType,lyricSize:localSettings.lyricSize,pinned:localSettings.pinned,
+      queue,planned,items,browseType,browseError,lyricSize:localSettings.lyricSize,pinned:localSettings.pinned,
       playlistName:playlist?.name||'',
       playlistImageUrl:playlist?.imageUrl||'',notice,repeat,shuffle,
       deviceName,deviceRestricted,deviceId:playback?.device?.id||'',
@@ -164,6 +164,7 @@ async function openPanel(context,forceDemo=false){
   }
   function device(){return playback?.device?.id||undefined;}
   async function browse(type,query){
+    browseError='';
     if(demo){notice='Log in with geekify login to browse Spotify.';emit();return;}
     let response;
     if(type==='search'||type==='daily'){
@@ -188,7 +189,14 @@ async function openPanel(context,forceDemo=false){
       emit();return;
     }
     else if(type==='library-liked')response=(await api.saved())?.items?.map(x=>x.track).filter(Boolean)||[];
-    else if(type==='library-playlists')response=(await api.playlists())?.items||[];
+    else if(type==='library-playlists'){
+      try{response=await api.allPlaylists();}
+      catch(error){
+        browseType=type;items=[];
+        browseError=safeError(error);
+        emit();return;
+      }
+    }
     else if(type==='playlist')response=spotify.playlistTrackItems(await api.playlistItems(playlist.id));
     else if(type==='devices')response=(await api.devices())?.devices||[];
     else if(type==='management'||type==='queue'){
