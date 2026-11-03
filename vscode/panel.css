@@ -331,3 +331,34 @@ button:focus-visible,input:focus-visible,[role="slider"]:focus-visible{outline:3
   .playlist-hero{gap:10px;}
   .item{gap:9px;padding:7px 3px;}
 }
+
+/* Crisp, readable pixel typography, with a normal fallback when offline. */
+:root{font-family:'Pixelify Sans',ui-monospace,Consolas,monospace;}
+body,button,input{font-family:'Pixelify Sans',ui-monospace,Consolas,monospace;}
+button,input{letter-spacing:.015em;}
+.item .item-title{white-space:normal;overflow-wrap:anywhere;line-height:1.18;}
+.item .item-subtitle{white-space:normal;line-height:1.2;}
+.folder-item{background:#edd0a84d;padding:12px 9px;border-left:3px solid #956039;min-height:66px;}
+.folder-item:hover{background:#e2b68ecc;}
+.folder-icon{flex:none;width:38px;height:38px;color:#85502e;display:flex;align-items:center;justify-content:center;}
+.folder-icon .pixel-icon{width:30px;height:30px;shape-rendering:crispEdges;}
+.folder-chevron{flex:none;width:22px;height:22px;color:#775038;}
+.folder-chevron .pixel-icon{width:18px;height:18px;shape-rendering:crispEdges;}
+.library-breadcrumbs{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:0 0 11px;font-size:.85em;line-height:1.3;}
+.library-back{background:#f1caa0;color:#57331f;border:2px solid #a56c48;padding:5px 9px;font-size:1em;cursor:pointer;}
+.breadcrumb-current{overflow-wrap:anywhere;font-weight:700;}
+/* Larger artwork on roomy viewports, without sacrificing transport controls. */
+@media(min-width:901px){
+  .player-panel{grid-template-columns:minmax(120px,155px) minmax(140px,1fr) minmax(260px,1.75fr);min-height:187px;}
+  .album-art-frame{max-width:150px;}
+  .playlist-hero-cover{width:clamp(104px,14vw,158px);}
+}
+@media(min-width:691px) and (max-width:900px){
+  .player-panel{grid-template-columns:98px minmax(95px,1fr) minmax(205px,1.5fr);min-height:155px;}
+  .album-art-frame{max-width:98px;}
+}
+@media(max-width:690px){
+  .album-art-frame{width:75px;max-width:75px;}
+  .player-panel{grid-template-columns:80px minmax(0,1fr);}
+  .folder-icon{width:31px;height:31px;}
+}

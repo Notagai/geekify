@@ -17,7 +17,7 @@ const DEMO_LYRICS=[
   {timeMs:112000,text:'the city keeps glowing'}
 ];
 const allowedActions=new Set(['toggle','next','previous','seek','save','shuffle','repeat',
-  'playItem','transfer','search','library','playlists','playlist','devices','queue','openWeb','refresh']);
+  'playItem','transfer','search','library','libraryFolder','libraryBack','playlist','devices','queue','openWeb','refresh']);
 const safeError=e=>String(e?.message||e).replace(/[\x00-\x1f\x7f-\x9f]/g,' ').slice(0,175);
 
 let activePanel;
@@ -144,8 +144,17 @@ async function openPanel(context,forceDemo=false){
     if(demo){notice='Log in with geekify login to browse Spotify.';emit();return;}
     let response;
     if(type==='search')response=(await api.search(String(query||'').slice(0,100)))?.tracks?.items||[];
-    else if(type==='library')response=(await api.saved())?.items?.map(x=>x.track).filter(Boolean)||[];
-    else if(type==='playlists')response=(await api.playlists())?.items||[];
+    else if(type==='library'){
+      playlist=null;
+      browseType='library';
+      items=[
+        {type:'folder',id:'liked',title:'Liked Songs',subtitle:'Your saved tracks'},
+        {type:'folder',id:'playlists',title:'Playlists',subtitle:'Your Spotify playlists'}
+      ];
+      emit();return;
+    }
+    else if(type==='library-liked')response=(await api.saved())?.items?.map(x=>x.track).filter(Boolean)||[];
+    else if(type==='library-playlists')response=(await api.playlists())?.items||[];
     else if(type==='playlist')response=spotify.playlistTrackItems(await api.playlistItems(playlist.id));
     else if(type==='devices')response=(await api.devices())?.devices||[];
     else if(type==='queue'){
@@ -155,7 +164,7 @@ async function openPanel(context,forceDemo=false){
     browseType=type;
     items=response.map(item=>{
       if(type==='devices')return {type:'device',id:item.id,title:item.name,subtitle:item.is_active?'Active':'Available'};
-      if(type==='playlists')return {type:'playlist',id:item.id,title:item.name,
+      if(type==='library-playlists')return {type:'playlist',id:item.id,title:item.name,
         subtitle:(item.items?.total??item.tracks?.total??0)+' tracks',name:item.name,
         imageUrl:item.images?.[0]?.url||''};
       const t=spotify.trackInfo(item);
@@ -172,7 +181,16 @@ async function openPanel(context,forceDemo=false){
       await vscode.env.openExternal(vscode.Uri.parse('https://open.spotify.com/'));return;
     }
     if(name==='refresh'){if(demo)emit();else await poll();return;}
-    if(name==='search'||name==='library'||name==='playlists'||name==='devices'||name==='queue'){
+    if(name==='libraryFolder'){
+      if(message.id==='liked'||message.id==='playlists')await browse('library-'+message.id);
+      return;
+    }
+    if(name==='libraryBack'){
+      if(browseType==='playlist')await browse('library-playlists');
+      else await browse('library');
+      return;
+    }
+    if(name==='search'||name==='library'||name==='devices'||name==='queue'){
       await browse(name,message.query);return;
     }
     if(name==='playlist'){

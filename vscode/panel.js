@@ -53,17 +53,44 @@ const pixelGlyphs={
   ],
   library:[
     '................',
-    '..####.####.##..',
-    '..##.#.##.#.##..',
-    '..##.#.##.#.##..',
-    '..##.#.##.#.##..',
-    '..##.#.##.#.##..',
-    '..##.#.##.#.##..',
-    '..##.#.##.#.##..',
-    '..##.#.##.#.##..',
-    '..##.#.##.#.##..',
-    '..####.####.##..',
-    '..############..'
+    '..######........',
+    '..######........',
+    '.############...',
+    '.############...',
+    '.##........##...',
+    '.##........##...',
+    '.##........##...',
+    '.##........##...',
+    '.############...',
+    '.############...',
+    '................'
+  ],
+  folder:[
+    '................',
+    '..######........',
+    '..######........',
+    '.############...',
+    '.############...',
+    '.##........##...',
+    '.##........##...',
+    '.##........##...',
+    '.##........##...',
+    '.############...',
+    '.############...',
+    '................'
+  ],
+  chevron:[
+    '................',
+    '......##........',
+    '.......##.......',
+    '........##......',
+    '.........##.....',
+    '..........##....',
+    '.........##.....',
+    '........##......',
+    '.......##.......',
+    '......##........',
+    '................'
   ],
   playlists:[
     '................',
@@ -255,13 +282,13 @@ const nav=make('nav','sidebar-nav',sidebar);
 nav.setAttribute('aria-label','Geekify sections');
 const navDefs=[
  ['now','Now Playing'],['search','Search'],['library','Library'],
- ['playlists','Playlists'],['devices','Devices'],['settings','Settings']
+ ['devices','Devices'],['settings','Settings']
 ];
 const navButtons=[];
 for(const [id,title] of navDefs){
   const b=button('nav-item',nav,undefined,()=>{
     activeTab=id;activeSub='lyrics';lyricSignature='';
-    if(id==='library'||id==='playlists'||id==='devices')send(id);
+    if(id==='library'||id==='devices')send(id);
     redraw();
   });
   b.append(icon(id));
@@ -397,10 +424,22 @@ function coverImage(url,cls,alt){
 }
 function renderList(items){
   paper.replaceChildren();
+  const libraryOpen=activeTab==='library'&&state.browseType!=='library';
+  if(libraryOpen){
+    const trail=textNode('div','library-breadcrumbs','');
+    const back=button('library-back',trail,'← Library',()=>send('libraryBack'));
+    back.setAttribute('aria-label','Back one folder');
+    if(state.browseType==='playlist'){
+      trail.append(textNode('span','breadcrumb-separator','/ Playlists /'));
+      trail.append(textNode('span','breadcrumb-current',state.playlistName||''));
+    }else trail.append(textNode('span','breadcrumb-current',state.browseType==='library-liked'?'/ Liked Songs':'/ Playlists'));
+    paper.append(trail);
+  }
   const heading=textNode('div','title-line',activeTab==='search'?'SEARCH':
-    activeTab==='library'?'LIKED SONGS':activeTab==='playlists'?(state.playlistName||'YOUR PLAYLISTS'):
+    activeTab==='library'?(state.browseType==='playlist'?(state.playlistName||'PLAYLIST'):
+      state.browseType==='library-liked'?'LIKED SONGS':state.browseType==='library-playlists'?'PLAYLISTS':'LIBRARY'):
       activeTab==='devices'?'DEVICES':'UP NEXT');
-  if(activeTab==='playlists'&&state.browseType==='playlist'){
+  if(activeTab==='library'&&state.browseType==='playlist'){
     const hero=textNode('div','playlist-hero','');
     hero.append(coverImage(state.playlistImageUrl,'playlist-hero-cover','Playlist cover'));
     const details=textNode('div','playlist-hero-details','');
@@ -426,14 +465,21 @@ function renderList(items){
   (items||[]).slice(0,25).forEach(item=>{
     const button=textNode('button','item','');
     button.type='button';
-    if(item.type==='playlist'||item.type==='track'){
+    if(item.type==='folder'){
+      const folder=textNode('span','folder-icon','');folder.append(icon('folder'));button.append(folder);
+      button.className+=' folder-item';
+    }else if(item.type==='playlist'||item.type==='track'){
       button.append(coverImage(item.imageUrl,'playlist-row-cover',item.type==='playlist'?'Playlist cover':'Album cover'));
     }
     const labels=textNode('span','item-labels','');
     labels.append(textNode('span','item-title',truncate(item.title,70)));
     labels.append(textNode('small','item-subtitle',truncate(item.subtitle,60)));
     button.append(labels);
-    if(item.type==='playlist')button.addEventListener('click',()=>send('playlist',{id:item.id}));
+    if(item.type==='folder'){
+      const arrow=textNode('span','folder-chevron','');arrow.append(icon('chevron'));button.append(arrow);
+    }
+    if(item.type==='folder')button.addEventListener('click',()=>send('libraryFolder',{id:item.id}));
+    else if(item.type==='playlist')button.addEventListener('click',()=>send('playlist',{id:item.id}));
     else if(item.type==='device')button.addEventListener('click',()=>send('transfer',{deviceId:item.id}));
     else button.addEventListener('click',()=>send('playItem',{uri:item.uri}));
     list.append(button);
@@ -475,7 +521,7 @@ function redraw(){
     paper.append(textNode('p','note','Run geekify login to authorize Spotify with streaming access.'));
     paper.append(textNode('p','secondary','The VS Code panel may not support protected playback. Use Spotify web player when needed.'));
   }else renderList(
-    state.browseType===activeTab||(activeTab==='playlists'&&state.browseType==='playlist')
+    (activeTab==='library'&&['library','library-liked','library-playlists','playlist'].includes(state.browseType))||state.browseType===activeTab
       ?state.items:[]
   );
   renderProgress();
