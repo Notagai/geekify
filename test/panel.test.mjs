@@ -170,7 +170,8 @@ test('settings file, default lyric size, pinned playlists and scrolling renderer
  assert.ok(ui.includes("current?.scrollIntoView?.("));
  assert.ok(ui.includes("block:'center'"));
  assert.ok(ui.includes("const row=textNode('div','item-row','')"));
- assert.ok(ui.includes("button('pin-playlist',row,"));
+ assert.ok(ui.includes("button('playlist-more',actions,"));
+ assert.ok(ui.includes("showPlaylistMenu(item,menuButton)"));
  assert.ok(ui.includes("button('queue-add',row,"));
  assert.ok(ui.includes("send(lastSearch?'search':'daily'"));
  assert.ok(ui.includes("player.classList.toggle('cover-expanded'"));
