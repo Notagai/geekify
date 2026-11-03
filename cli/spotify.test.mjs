@@ -54,3 +54,24 @@ test('playlist API invalid responses are not mistaken for empty libraries',async
   api.playlists=async()=>({unexpected:'shape'});
   await assert.rejects(api.allPlaylists(),/invalid playlists response/);
 });
+
+test('playlist pagination keeps first page after later page fails',async()=>{
+  const api=new SpotifyApi();
+  const pages=[];
+  api.playlists=async offset=>{
+    if(offset===0)return {offset:0,limit:50,next:'more',
+      items:[{id:'playlist1',name:'First playlist'}]};
+    throw new Error('Spotify offset request returned 403');
+  };
+  await assert.rejects(
+    api.allPlaylists(10,page=>pages.push(page)),
+    error=>{
+      assert.match(error.message,/403/);
+      assert.equal(error.partialItems.length,1);
+      assert.equal(error.partialItems[0].name,'First playlist');
+      return true;
+    }
+  );
+  assert.equal(pages.length,1);
+  assert.equal(pages[0][0].id,'playlist1');
+});
