@@ -85,7 +85,8 @@ async function openPanel(context,forceDemo=false){
   function emit(){
     const scopes=String(auth.loadConfig().token?.scope||'').split(/\s+/);
     send({type:'state',demo,track,playing,progressMs,lyrics,lyricsStatus,
-      queue,items,browseType,playlistName:playlist?.name||'',notice,repeat,shuffle,
+      queue,items,browseType,playlistName:playlist?.name||'',
+      playlistImageUrl:playlist?.imageUrl||'',notice,repeat,shuffle,
       canStream:!demo&&scopes.includes('streaming')});
   }
   const state={panel,enableDemo(){
@@ -155,10 +156,12 @@ async function openPanel(context,forceDemo=false){
     items=response.map(item=>{
       if(type==='devices')return {type:'device',id:item.id,title:item.name,subtitle:item.is_active?'Active':'Available'};
       if(type==='playlists')return {type:'playlist',id:item.id,title:item.name,
-        subtitle:(item.items?.total??item.tracks?.total??0)+' tracks',name:item.name};
+        subtitle:(item.items?.total??item.tracks?.total??0)+' tracks',name:item.name,
+        imageUrl:item.images?.[0]?.url||''};
       const t=spotify.trackInfo(item);
       if(!t)return null;
-      return {type:'track',id:t.id,uri:t.uri,title:t.title,subtitle:t.artist};
+      return {type:'track',id:t.id,uri:t.uri,title:t.title,subtitle:t.artist,
+        imageUrl:t.imageUrl||''};
     }).filter(Boolean);
     emit();
   }
