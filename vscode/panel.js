@@ -526,12 +526,19 @@ function renderList(items){
     paper.append(input);
   }
   const list=textNode('div','list','');paper.append(list);
-  if(activeTab==='library'&&state.browseType==='library-playlists'&&!(items||[]).length){
-    const message=state.browseError
-      ?'Could not load playlists: '+state.browseError
-      :'No playlists returned by Spotify. Check that this is the correct Spotify account.';
-    list.append(textNode('p','note',message));
-    button('setting-control',list,'Retry loading playlists',()=>send('libraryFolder',{id:'playlists'}));
+  if(activeTab==='library'&&state.browseType==='library-playlists'){
+    const count=(items||[]).length;
+    const statusText=state.browseLoading
+      ?'Loading Spotify playlists… '+count+' received'
+      :count+' playlists received from Spotify';
+    list.append(textNode('p','secondary',statusText));
+    if(state.browseError){
+      list.append(textNode('p','note','Spotify playlist request failed: '+state.browseError));
+    }else if(!count&&!state.browseLoading){
+      list.append(textNode('p','note','Spotify returned no playlists for this account.'));
+    }
+    if(state.browseError||(!count&&!state.browseLoading))
+      button('setting-control',list,'Retry loading playlists',()=>send('libraryFolder',{id:'playlists'}));
   }
   (items||[]).forEach(item=>{
     const row=textNode('div','item-row','');
@@ -572,7 +579,8 @@ function renderList(items){
     else button.addEventListener('click',()=>send('openResult',{uri:item.uri}));
     list.append(row);
   });
-  if(!items?.length)list.append(textNode('p','secondary','No tracks here yet.'));
+  if(!items?.length&&!(activeTab==='library'&&state.browseType==='library-playlists'))
+    list.append(textNode('p','secondary','No tracks here yet.'));
 }
 function managementSong(item,idx,planned){
   const row=textNode('div','management-song','');

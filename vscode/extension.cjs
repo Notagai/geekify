@@ -81,7 +81,7 @@ async function openPanel(context,forceDemo=false){
   let lyrics=demo?DEMO_LYRICS:[],lyricsStatus=demo?'synced':'missing';
   let playback=null,repeat='off',shuffle=false,deviceName='',deviceRestricted=false;
   let controlBusy=false,lastControlAt=0;
-  let queue=[],items=[],browseType='',playlist=null,notice='',browseError='',planned=[];
+  let queue=[],items=[],browseType='',playlist=null,notice='',browseError='',browseLoading=false,planned=[];
   const settingsPath=join(homedir(),'.geekify','settings.json');
   function readSettings(){
     try{const data=JSON.parse(readFileSync(settingsPath,'utf8'));
@@ -97,7 +97,7 @@ async function openPanel(context,forceDemo=false){
   function emit(){
     const scopes=String(auth.loadConfig().token?.scope||'').split(/\s+/);
     send({type:'state',demo,track,playing,progressMs,lyrics,lyricsStatus,
-      queue,planned,items,browseType,browseError,lyricSize:localSettings.lyricSize,pinned:localSettings.pinned,
+      queue,planned,items,browseType,browseError,browseLoading,lyricSize:localSettings.lyricSize,pinned:localSettings.pinned,
       playlistName:playlist?.name||'',
       playlistImageUrl:playlist?.imageUrl||'',notice,repeat,shuffle,
       deviceName,deviceRestricted,deviceId:playback?.device?.id||'',
@@ -190,12 +190,29 @@ async function openPanel(context,forceDemo=false){
     }
     else if(type==='library-liked')response=(await api.saved())?.items?.map(x=>x.track).filter(Boolean)||[];
     else if(type==='library-playlists'){
-      try{response=await api.allPlaylists();}
-      catch(error){
-        browseType=type;items=[];
+      browseType=type;items=[];browseLoading=true;emit();
+      try{
+        response=await api.allPlaylists(10,page=>{
+          items=page.map(item=>({
+            type:'playlist',id:item.id,title:item.name||'Untitled playlist',
+            subtitle:(item.items?.total??item.tracks?.total??'Unknown number of')+' tracks',
+            name:item.name||'Untitled playlist',uri:item.uri||'spotify:playlist:'+item.id,
+            imageUrl:item.images?.[0]?.url||''
+          }));
+          emit();
+        });
+      }catch(error){
         browseError=safeError(error);
-        emit();return;
+        const partial=Array.isArray(error.partialItems)?error.partialItems:[];
+        // Keep successful pages rather than replacing them with an empty screen.
+        if(partial.length&&items.length===0)
+          items=partial.map(item=>({type:'playlist',id:item.id,title:item.name||'Untitled playlist',
+            subtitle:(item.items?.total??item.tracks?.total??'Unknown number of')+' tracks',
+            name:item.name||'Untitled playlist',uri:item.uri||'spotify:playlist:'+item.id,
+            imageUrl:item.images?.[0]?.url||''}));
+        browseLoading=false;emit();return;
       }
+      browseLoading=false;
     }
     else if(type==='playlist')response=spotify.playlistTrackItems(await api.playlistItems(playlist.id));
     else if(type==='devices')response=(await api.devices())?.devices||[];
