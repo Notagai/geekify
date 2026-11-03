@@ -296,6 +296,12 @@ board.style.setProperty('--idle-image','url("'+assets['sidebar/button-idle']+'")
 board.style.setProperty('--brand-vine-image','url("'+assets['branding/ivy-corner']+'")');
 board.style.setProperty('--flowers-image','url("'+assets['decor/flowers']+'")');
 board.style.setProperty('--polaroid-image','url("'+assets['decor/polaroid']+'")');
+// Decorative foliage reuses the existing pixel-art ivy asset, with no new
+// downloads or overlays that can intercept controls.
+const edgeFoliage=make('div','edge-foliage',board);
+edgeFoliage.setAttribute('aria-hidden','true');
+for(const corner of ['top-left','top-right','bottom-left','bottom-right'])
+  make('span','edge-leaf edge-leaf-'+corner,edgeFoliage);
 const frame=make('div','desk',board);
 const header=make('header','desk-header',frame);
 const brand=make('div','brand-mark',header);
