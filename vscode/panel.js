@@ -302,7 +302,13 @@ const navDefs=[
 const navButtons=[];
 for(const [id,title] of navDefs){
   const b=button('nav-item section-tab',nav,undefined,()=>{
+    const previousTab=activeTab;
     activeTab=id;activeSub='lyrics';lyricSignature='';
+    // Lyrics rendering caches its DOM. Leaving Current replaces the paper
+    // contents, so invalidate that cache before returning to Current.
+    if(id==='now'&&previousTab!=='now'){
+      lyricTrackKey='';lyricActiveIndex=-1;lyricNodes=[];
+    }
     if(id==='search')send(lastSearch?'search':'daily',{query:lastSearch});
     if(id==='library'||id==='devices'||id==='management')send(id);
     redraw();
