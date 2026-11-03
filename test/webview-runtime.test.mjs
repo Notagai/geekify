@@ -69,7 +69,7 @@ test('responsive player bootstraps and renders state with a mocked VS Code DOM',
     }
     return null;
   };
-  for(const label of ['Now Playing','Search','Library','Devices','Settings']){
+  for(const label of ['Current','Library','Management','Search','Devices','Settings']){
     const item=walk(uiRoot,node=>node.attrs?.['aria-label']===label);
     assert.ok(item,'Missing '+label+' navigation control');
     assert.equal(item.tag,'button');
