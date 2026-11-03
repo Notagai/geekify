@@ -17,7 +17,7 @@ const DEMO_LYRICS=[
   {timeMs:112000,text:'the city keeps glowing'}
 ];
 const allowedActions=new Set(['toggle','next','previous','seek','save','shuffle','repeat',
-  'playItem','openResult','togglePin','lyricsSize','planTrack','movePlanned','removePlanned','submitPlan','management','transfer','search','daily','recent','library','libraryFolder','libraryBack','playlist','devices','queue','openWeb','refresh']);
+  'playItem','openResult','togglePin','lyricsSize','planTrack','movePlanned','removePlanned','submitPlan','management','transfer','search','daily','recent','library','libraryFolder','libraryBack','playlist','retryPlaylist','devices','queue','openWeb','refresh']);
 const safeError=e=>String(e?.message||e).replace(/[\x00-\x1f\x7f-\x9f]/g,' ').slice(0,175);
 
 let activePanel;
@@ -292,6 +292,10 @@ async function openPanel(context,forceDemo=false){
     }
     if(name==='search'||name==='daily'||name==='recent'||name==='library'||name==='devices'||name==='queue'||name==='management'){
       await browse(name,message.query);return;
+    }
+    if(name==='retryPlaylist'){
+      if(playlist)await browse('playlist');
+      return;
     }
     if(name==='playlist'){
       const selected=items.find(x=>x.type==='playlist'&&x.id===message.id);
