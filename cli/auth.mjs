@@ -8,7 +8,7 @@ import { spawn } from 'node:child_process';
 const DIR=join(homedir(),'.geekify');
 const PATH=join(DIR,'config.json');
 const CALLBACK='http://127.0.0.1:8888/callback';
-const SCOPE='user-read-playback-state user-read-currently-playing user-modify-playback-state user-library-read user-library-modify playlist-read-private playlist-read-collaborative streaming user-read-email user-read-private';
+const SCOPE='user-read-playback-state user-read-currently-playing user-modify-playback-state user-library-read user-library-modify playlist-read-private playlist-read-collaborative streaming user-read-email user-read-private user-read-recently-played';
 export const redirectUri=CALLBACK;
 export function loadConfig(){
   try{return JSON.parse(readFileSync(PATH,'utf8'))||{};}catch{return {};}
