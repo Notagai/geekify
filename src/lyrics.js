@@ -5,6 +5,16 @@ const cache = new Map();
 const BASE = 'https://lrclib.net/api';
 const NORMAL = /[^\p{L}\p{N}]+/gu;
 const normalize = text => String(text || '').toLocaleLowerCase().normalize('NFKC').replace(NORMAL, ' ').trim();
+// Normalize Cyrillic/Latin spellings without treating an unrelated song as a match.
+const CYRILLIC={'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'e','ж':'zh','з':'z','и':'i','й':'i','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya'};
+const phonetic = value => normalize(String(value||'').toLocaleLowerCase().replace(/[а-яё]/g,c=>CYRILLIC[c]||c)).replace(/y/g,'i');
+const artists = value => String(value||'').split(/\\s*(?:,|\\s[&+]\\s|\\s(?:feat\\.?|ft\\.?|featuring)\\s)\\s*/i).map(x=>x.trim()).filter(Boolean);
+const distinct = values => [...new Set(values.filter(Boolean))];
+const sameTitle=(a,b)=>{const x=phonetic(cleanTitle(a)),y=phonetic(cleanTitle(b));return Boolean(x&&y&&(x===y||(x.length>=9&&y.length>=9&&(x.includes(y)||y.includes(x)))));};
+const sameArtist=(a,b)=>{
+  const x=distinct(artists(a).map(phonetic)),y=distinct(artists(b).map(phonetic));
+  return x.some(p=>y.some(q=>p===q||(p.length>=7&&q.length>=7&&(p.includes(q)||q.includes(p)))));
+};
 const cleanTitle = title => String(title || '')
   .replace(/\s*[\(\[]\s*(?:feat\.?|ft\.?|featuring)\b[^\)\]]*[\)\]]/ig, '')
   .replace(/\s*[\(\[]\s*(?:remaster(?:ed)?|radio edit|single version|album version|explicit|clean)\b[^\)\]]*[\)\]]/ig, '')
@@ -35,12 +45,9 @@ export function lyricIndex(lines,elapsedMs) {
 }
 export function scoreMatch(record,track) {
   if(!record || record.instrumental)return -1;
-  const want=normalize(cleanTitle(track.title)), got=normalize(cleanTitle(record.trackName||record.name));
-  const artist=normalize(track.primaryArtist), foundArtist=normalize(record.artistName);
-  if(!want || !got || !artist || !foundArtist)return -1;
-  // Require recognizable song AND main artist. Reject unrelated covers.
-  if(want!==got && !(want.length>=8 && (got.includes(want)||want.includes(got))))return -1;
-  if(artist!==foundArtist && !(artist.length>=5 && (foundArtist.includes(artist)||artist.includes(foundArtist))))return -1;
+  const want=phonetic(cleanTitle(track.title)), got=phonetic(cleanTitle(record.trackName||record.name));
+  const artist=phonetic(track.primaryArtist),foundArtist=phonetic(record.artistName);
+  if(!sameTitle(track.title,record.trackName||record.name)||!sameArtist(track.artist||track.primaryArtist,record.artistName))return -1;
   const seconds=track.durationMs ? Math.round(track.durationMs/1000):0;
   const difference=seconds&&record.duration?Math.abs(seconds-record.duration):0;
   if(seconds&&record.duration&&difference>12)return -1;
@@ -66,7 +73,7 @@ async function getJson(path,params,signal) {
 }
 export async function lookupLyrics(track,signal) {
   if(!track?.title||!track?.primaryArtist)return {lines:[],plain:[],status:'missing'};
-  const key=[track.title,track.primaryArtist,track.album,track.durationMs].join('|');
+  const key=[track.title,track.primaryArtist,track.artist,track.album,track.durationMs].join('|');
   const cached=cache.get(key);
   if(cached&&cached.until>Date.now())return cached.value;
   const exact={track_name:track.title,artist_name:track.primaryArtist};
@@ -78,11 +85,12 @@ export async function lookupLyrics(track,signal) {
   try{candidate=await getJson('/get',exact,signal);}
   catch(error){if(signal?.aborted)throw error;providerError=error;}
   if(scoreMatch(candidate,track)<0 || !candidate?.syncedLyrics) {
-    const variants=[track.title,cleanTitle(track.title)].filter((v,i,a)=>v&&a.indexOf(v)===i);
-    // First try artist-constrained results; then broaden to title-only search.
-    // scoreMatch still checks artist, title and duration before accepting a record.
-    const searches=[...variants.map(title=>({track_name:title,artist_name:track.primaryArtist})),
-      ...variants.map(title=>({q:title+' '+track.primaryArtist}))];
+    const variants=distinct([track.title,cleanTitle(track.title)]);
+    const names=distinct([track.primaryArtist,...artists(track.artist||track.primaryArtist)]);
+    // Search all credited artists: many releases are indexed under a
+    // collaborator, not the first Spotify artist.
+    const searches=[...variants.flatMap(title=>names.map(name=>({track_name:title,artist_name:name}))),
+      ...variants.map(title=>({q:title})),...variants.map(title=>({q:title+' '+track.primaryArtist}))];
     for(const params of searches){
       let results;
       try{results=await getJson('/search',params,signal);}
@@ -104,9 +112,13 @@ export async function lookupLyrics(track,signal) {
     value={lines,plain,status:lines.length?'synced':plain.length?'plain':'missing',source:'LRCLIB'};
   }
   if(value.status!=='synced'&&value.status!=='plain'){
-    const variants=[track.title,cleanTitle(track.title)].filter((v,i,a)=>v&&a.indexOf(v)===i);
+    const variants=distinct([track.title,cleanTitle(track.title)]);
+    const names=distinct([track.primaryArtist,...artists(track.artist||track.primaryArtist)]);
     for(const title of variants){
-      value=await lookupPlainBackup({...track,title},signal)||value;
+      for(const primaryArtist of names){
+        value=await lookupPlainBackup({...track,title,primaryArtist},signal)||value;
+        if(value.status!=='missing')break;
+      }
       if(value.status!=='missing')break;
     }
   }

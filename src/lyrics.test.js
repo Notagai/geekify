@@ -69,3 +69,31 @@ test('title-only LRCLIB search finds verified artist when constrained search mis
     assert.equal(result.status,'synced');
   }finally{globalThis.fetch=oldFetch;}
 });
+
+test('Gde Ti matches Cyrillic title and a credited collaborator',()=>{
+  const song={title:'Gde Ti',primaryArtist:'Килджо',artist:'Килджо, Immoral Freak',durationMs:110000};
+  assert.ok(scoreMatch({trackName:'Где Ты',artistName:'Immoral Freak',duration:110,syncedLyrics:'[00:01] sample'},song)>0);
+  assert.equal(scoreMatch({trackName:'Где Ты',artistName:'Unrelated Artist',duration:110},song),-1);
+  assert.equal(scoreMatch({trackName:'Где Ты',artistName:'Immoral Freak',duration:180},song),-1);
+});
+test('Butterflies by Zeli does not match a same-title song by another artist',()=>{
+  const song={title:'Butterflies',primaryArtist:'Zeli',artist:'Zeli',durationMs:166000};
+  assert.equal(scoreMatch({trackName:'Butterflies',artistName:'Other Singer',duration:166},song),-1);
+  assert.ok(scoreMatch({trackName:'Butterflies',artistName:'Zeli',duration:166},song)>0);
+});
+test('lyrics fallback searches collaborating artist if primary artist has no match',async()=>{
+  const oldFetch=globalThis.fetch;
+  const calls=[];
+  globalThis.fetch=async url=>{
+    const u=String(url);calls.push(u);
+    if(u.includes('/api/get?'))return {ok:false,status:404};
+    if(u.includes('/api/search?'))return {ok:true,status:200,json:async()=>u.includes('Immoral+Freak')?
+      [{trackName:'Gde Ti',artistName:'Immoral Freak',duration:110,syncedLyrics:'[00:01] synced'}]:[]};
+    return {ok:false,status:404};
+  };
+  try{
+    const result=await lookupLyrics({title:'Gde Ti',primaryArtist:'Килджо',artist:'Килджо, Immoral Freak',durationMs:110000});
+    assert.equal(result.status,'synced');
+    assert.ok(calls.some(u=>u.includes('Immoral+Freak')));
+  }finally{globalThis.fetch=oldFetch;}
+});
