@@ -275,7 +275,7 @@ make('span','brand-vine',brand).setAttribute('aria-hidden','true');
 const brandBadge=make('div','brand-badge',brand);
 brandBadge.append(icon('brand'));
 make('span','brand-label',brandBadge,'geekify.');
-const connection=make('span','connection',header,'● Spotify');
+const connection=make('span','connection',header,'● No active device');
 const workspace=make('div','workspace',frame);
 const sidebar=make('aside','sidebar',workspace);
 const nav=make('nav','sidebar-nav',sidebar);
@@ -288,6 +288,7 @@ const navButtons=[];
 for(const [id,title] of navDefs){
   const b=button('nav-item',nav,undefined,()=>{
     activeTab=id;activeSub='lyrics';lyricSignature='';
+    if(id==='search')send('search',{query:lastSearch});
     if(id==='library'||id==='devices')send(id);
     redraw();
   });
@@ -297,8 +298,12 @@ for(const [id,title] of navDefs){
   navButtons.push({id,button:b});
 }
 const decor=make('div','sidebar-decor',sidebar);
-make('div','decor-flowers',decor).setAttribute('aria-hidden','true');
-make('div','decor-photo',decor).setAttribute('aria-hidden','true');
+for(const [cls,label] of [['decor-flowers','Flowers'],['decor-photo','Photo']]){
+  const obj=button('decor-interactive '+cls,decor,undefined,()=>{
+    obj.classList.toggle('touched');
+  });
+  obj.setAttribute('aria-label','Move '+label+' decoration');
+}
 const sheet=make('section','parchment',workspace);
 const tabs=make('div','paper-tabs',sheet);
 const subButtons=[];
@@ -314,7 +319,12 @@ const paper=make('div','paper-content',sheet);
 paper.setAttribute('aria-live','polite');
 const player=make('section','player-panel',frame);
 player.setAttribute('aria-label','Music playback');
-const artWrap=make('div','album-art-frame',player);
+const artWrap=button('album-art-frame',player,undefined,()=>{
+  const expanded=artWrap.classList.toggle('expanded');
+  artWrap.setAttribute('aria-expanded',String(expanded));
+});
+artWrap.setAttribute('aria-label','Expand playing song cover');
+artWrap.setAttribute('aria-expanded','false');
 const cover=make('img','album-art',artWrap);
 cover.alt='Album cover';
 cover.src=assets['player/default-cover'];
@@ -332,7 +342,13 @@ for(const [id,action,description] of [
  ['pause','toggle','Pause or play'],['next','next','Next song'],
  ['repeat','repeat','Change repeat mode']
 ]){
-  const b=button('transport '+(id==='pause'?'transport-primary':''),controls,undefined,()=>send(action));
+  const b=button('transport '+(id==='pause'?'transport-primary':''),controls,undefined,()=>{
+    if(sdkPlayer&&sdkDevice&&state.deviceId===sdkDevice){
+      const method=action==='toggle'?'togglePlay':action==='next'?'nextTrack':action==='previous'?'previousTrack':null;
+      if(method){void sdkPlayer[method]().catch(error=>{status.textContent=error.message;});return;}
+    }
+    send(action);
+  });
   b.append(icon(id));
   b.setAttribute('aria-label',description);
   transportButtons[id]=b;
@@ -448,6 +464,10 @@ function renderList(items){
     hero.append(details);paper.append(hero);
   }else paper.append(heading);
   if(activeTab==='search'){
+    const shortcuts=textNode('div','search-shortcuts','');
+    button('search-shortcut',shortcuts,'Daily Mixes',()=>send('daily'));
+    button('search-shortcut',shortcuts,'Recently Played',()=>send('recent'));
+    paper.append(shortcuts);
     const input=document.createElement('input');input.className='search-input';
     input.placeholder='Search tracks…';input.setAttribute('aria-label','Search Spotify');
     input.value=lastSearch;
@@ -468,7 +488,7 @@ function renderList(items){
     if(item.type==='folder'){
       const folder=textNode('span','folder-icon','');folder.append(icon('folder'));button.append(folder);
       button.className+=' folder-item';
-    }else if(item.type==='playlist'||item.type==='track'){
+    }else if(['playlist','track','album','artist','show','episode'].includes(item.type)){
       button.append(coverImage(item.imageUrl,'playlist-row-cover',item.type==='playlist'?'Playlist cover':'Album cover'));
     }
     const labels=textNode('span','item-labels','');
@@ -479,9 +499,13 @@ function renderList(items){
       const arrow=textNode('span','folder-chevron','');arrow.append(icon('chevron'));button.append(arrow);
     }
     if(item.type==='folder')button.addEventListener('click',()=>send('libraryFolder',{id:item.id}));
-    else if(item.type==='playlist')button.addEventListener('click',()=>send('playlist',{id:item.id}));
+    else if(item.type==='playlist')button.addEventListener('click',()=>{
+      if(activeTab==='search')send('openResult',{uri:item.uri});
+      else send('playlist',{id:item.id});
+    });
     else if(item.type==='device')button.addEventListener('click',()=>send('transfer',{deviceId:item.id}));
-    else button.addEventListener('click',()=>send('playItem',{uri:item.uri}));
+    else if(item.type==='track')button.addEventListener('click',()=>send('playItem',{uri:item.uri}));
+    else button.addEventListener('click',()=>send('openResult',{uri:item.uri}));
     list.append(button);
   });
   if(!items?.length)list.append(textNode('p','secondary','No tracks here yet.'));
@@ -503,7 +527,7 @@ function redraw(){
   artist.textContent=truncate(song.artist||'Search Spotify to begin',55);
   cover.src=song.imageUrl&&/^https:\/\/(?:i\.scdn\.co|mosaic\.scdn\.co|[a-z0-9.-]+\.spotifycdn\.com|[a-z0-9.-]+\.spotify\.com)\//i.test(song.imageUrl)
     ?song.imageUrl:assets['player/default-cover'];
-  connection.textContent=state.demo?'● Demo':'● Spotify';
+  connection.textContent=state.demo?'● Demo':'● '+(state.deviceName||'No active device')+(state.deviceRestricted?' (restricted)':'');
   tag.textContent=state.demo?'DEMO':'LIVE';
   transportButtons.pause.replaceChildren(icon(state.playing?'pause':'play'));
   transportButtons.pause.setAttribute('aria-label',state.playing?'Pause':'Play');
@@ -521,7 +545,7 @@ function redraw(){
     paper.append(textNode('p','note','Run geekify login to authorize Spotify with streaming access.'));
     paper.append(textNode('p','secondary','The VS Code panel may not support protected playback. Use Spotify web player when needed.'));
   }else renderList(
-    (activeTab==='library'&&['library','library-liked','library-playlists','playlist'].includes(state.browseType))||state.browseType===activeTab
+    (activeTab==='library'&&['library','library-liked','library-playlists','playlist'].includes(state.browseType))||(activeTab==='search'&&['search','daily','recent'].includes(state.browseType))||state.browseType===activeTab
       ?state.items:[]
   );
   renderProgress();

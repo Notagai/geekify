@@ -17,7 +17,7 @@ const DEMO_LYRICS=[
   {timeMs:112000,text:'the city keeps glowing'}
 ];
 const allowedActions=new Set(['toggle','next','previous','seek','save','shuffle','repeat',
-  'playItem','transfer','search','library','libraryFolder','libraryBack','playlist','devices','queue','openWeb','refresh']);
+  'playItem','openResult','transfer','search','daily','recent','library','libraryFolder','libraryBack','playlist','devices','queue','openWeb','refresh']);
 const safeError=e=>String(e?.message||e).replace(/[\x00-\x1f\x7f-\x9f]/g,' ').slice(0,175);
 
 let activePanel;
@@ -79,7 +79,7 @@ async function openPanel(context,forceDemo=false){
   let demo=forceDemo||!auth.isConnected();
   let track=demo?DEMO:null,playing=demo,progressMs=demo?75000:0;
   let lyrics=demo?DEMO_LYRICS:[],lyricsStatus=demo?'synced':'missing';
-  let playback=null,repeat='off',shuffle=false;
+  let playback=null,repeat='off',shuffle=false,deviceName='',deviceRestricted=false;
   let queue=[],items=[],browseType='',playlist=null,notice='';
   function send(message){if(!closed)void panel.webview.postMessage(message);}
   function emit(){
@@ -87,6 +87,7 @@ async function openPanel(context,forceDemo=false){
     send({type:'state',demo,track,playing,progressMs,lyrics,lyricsStatus,
       queue,items,browseType,playlistName:playlist?.name||'',
       playlistImageUrl:playlist?.imageUrl||'',notice,repeat,shuffle,
+      deviceName,deviceRestricted,deviceId:playback?.device?.id||'',
       canStream:!demo&&scopes.includes('streaming')});
   }
   const state={panel,enableDemo(){
@@ -124,6 +125,8 @@ async function openPanel(context,forceDemo=false){
       const state=await api.playback();
       if(closed||demo)return;
       playback=state;playing=Boolean(state?.is_playing);
+      deviceName=String(state?.device?.name||'No active device').slice(0,80);
+      deviceRestricted=Boolean(state?.device?.is_restricted);
       progressMs=state?.progress_ms||0;repeat=state?.repeat_state||'off';
       shuffle=Boolean(state?.shuffle_state);
       track=spotify.trackInfo(state?.item);
@@ -143,7 +146,17 @@ async function openPanel(context,forceDemo=false){
   async function browse(type,query){
     if(demo){notice='Log in with geekify login to browse Spotify.';emit();return;}
     let response;
-    if(type==='search')response=(await api.search(String(query||'').slice(0,100)))?.tracks?.items||[];
+    if(type==='search'||type==='daily'){
+      const q=type==='daily'?'Daily Mix':String(query||'').trim().slice(0,100);
+      if(!q){browseType='search';items=[];emit();return;}
+      const result=await api.search(q);
+      response=[];
+      for(const [key,kind] of [['tracks','track'],['albums','album'],['artists','artist'],['playlists','playlist'],['shows','show'],['episodes','episode']]){
+        if(type==='daily'&&kind!=='playlist')continue;
+        for(const entry of result?.[key]?.items||[])if(entry)response.push({...entry,_kind:kind});
+      }
+    }
+    else if(type==='recent')response=(await api.recent())?.items?.map(row=>row.track).filter(Boolean)||[];
     else if(type==='library'){
       playlist=null;
       browseType='library';
@@ -163,7 +176,10 @@ async function openPanel(context,forceDemo=false){
     }
     browseType=type;
     items=response.map(item=>{
-      if(type==='devices')return {type:'device',id:item.id,title:item.name,subtitle:item.is_active?'Active':'Available'};
+      if(type==='devices')return {type:'device',id:item.id,title:item.name,subtitle:(item.is_active?'Active':'Available')+(item.is_restricted?' · Restricted':'')};
+      if(item._kind&&item._kind!=='track')return {type:item._kind,id:item.id,uri:item.uri,title:item.name||'Untitled',
+        subtitle:item._kind==='album'?(item.artists||[]).map(x=>x.name).join(', '):item._kind.toUpperCase(),
+        imageUrl:item.images?.[0]?.url||item.album?.images?.[0]?.url||''};
       if(type==='library-playlists')return {type:'playlist',id:item.id,title:item.name,
         subtitle:(item.items?.total??item.tracks?.total??0)+' tracks',name:item.name,
         imageUrl:item.images?.[0]?.url||''};
@@ -190,7 +206,7 @@ async function openPanel(context,forceDemo=false){
       else await browse('library');
       return;
     }
-    if(name==='search'||name==='library'||name==='devices'||name==='queue'){
+    if(name==='search'||name==='daily'||name==='recent'||name==='library'||name==='devices'||name==='queue'){
       await browse(name,message.query);return;
     }
     if(name==='playlist'){
@@ -203,6 +219,19 @@ async function openPanel(context,forceDemo=false){
       else if(name==='next'||name==='previous'){progressMs=0;playing=true;}
       emit();return;
     }
+    if(name==='openResult'){
+      const found=items.find(x=>x.uri===message.uri&&x.type!=='track');
+      if(!found)return;
+      if(['playlist','album'].includes(found.type)){
+        if(playback?.device?.is_restricted)throw new Error('Selected device blocks playback commands.');
+        await api.playUri(found.uri,device());
+      }else if(['artist','show','episode'].includes(found.type)&&/^[A-Za-z0-9]+$/.test(found.id||'')){
+        await vscode.env.openExternal(vscode.Uri.parse('https://open.spotify.com/'+found.type+'/'+found.id));
+      }
+      return;
+    }
+    if(['toggle','next','previous','seek','shuffle','repeat','playItem'].includes(name)&&playback?.device?.is_restricted)
+      throw new Error('Device '+deviceName+' blocks remote controls. Switch devices or control playback in Spotify.');
     if(name==='transfer'){
       if(typeof message.deviceId!=='string'||!(/^[a-zA-Z0-9]+$/.test(message.deviceId)))throw new Error('Invalid device.');
       await api.transfer(message.deviceId);

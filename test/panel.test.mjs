@@ -111,3 +111,16 @@ test('Library owns the hierarchy and pixel font is permitted by CSP',()=>{
  assert.ok(html.includes('fonts.gstatic.com'));
  assert.ok(css.includes('max-width:150px'));
 });
+
+test('device status, search shortcuts and expandable art implemented',()=>{
+ const ext=readFileSync(resolve(root,'vscode/extension.cjs'),'utf8');
+ const ui=readFileSync(resolve(root,'vscode/panel.js'),'utf8');
+ const css=readFileSync(resolve(root,'vscode/panel.css'),'utf8');
+ assert.ok(ext.includes('deviceName,deviceRestricted,deviceId:'));
+ assert.ok(ext.includes("type==='recent'"));
+ assert.ok(ext.includes("type==='daily'"));
+ assert.ok(ui.includes("send('daily')"));
+ assert.ok(ui.includes("send('recent')"));
+ assert.ok(ui.includes("Expand playing song cover"));
+ assert.ok(css.includes('.album-art-frame.expanded{transform:scale(2)'));
+});

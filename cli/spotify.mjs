@@ -9,7 +9,8 @@ export function describeSpotifyFailure(status, reason='', detail='', method='GET
   if(status===401)hint='Reauthorize with geekify login.';
   else if(status===404)hint='Open Spotify Desktop, start a track and retry, or choose a device in tab 5.';
   else if(status===403) {
-    if(code.includes('PREMIUM'))hint='Spotify did not recognize Premium for this request. Check the authenticated account and app owner.';
+    if(code.includes('RESTRICTION')||userDetail.toLowerCase().includes('restriction violated'))hint='This device blocks remote control. Select another device or use Spotify directly.';
+    else if(code.includes('PREMIUM'))hint='Spotify did not recognize Premium for this request. Check the authenticated account and app owner.';
     else if(code.includes('RESTRICTION'))hint='The selected Spotify device restricts remote control. Try Spotify Desktop.';
     else if(code.includes('SCOPE')||code.includes('PERMISSION'))hint='Playback-control permission is missing. Run geekify login again.';
     else hint='Run geekify doctor to inspect granted scopes, app access and the active device.';
@@ -53,7 +54,8 @@ export class SpotifyApi {
       ...(deviceId?{device_id:deviceId}:{})
     }});
   }
-  async search(q,offset=0){return this.request('/search',{query:{q,type:'track',limit:25,offset}});}
+  async search(q,offset=0){return this.request('/search',{query:{q,type:'track,album,artist,playlist,show,episode',limit:10,offset}});}
+  async recent(){return this.request('/me/player/recently-played',{query:{limit:30}});}
   async saved(offset=0){return this.request('/me/tracks',{query:{limit:25,offset}});}
   async playlists(offset=0){return this.request('/me/playlists',{query:{limit:25,offset}});}
   async playlistItems(id,offset=0){return this.request('/playlists/'+encodeURIComponent(id)+'/items',{query:{limit:25,offset}});}
