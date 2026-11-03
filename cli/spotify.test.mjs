@@ -124,3 +124,12 @@ test('playlist shape diagnostics contain no names or IDs',()=>{
   assert.match(summary,/track: 1/);
   assert.doesNotMatch(summary,/Private title|private123/);
 });
+
+test('playing a playlist from a selected song preserves playlist context',async()=>{
+  const api=new SpotifyApi();let captured;
+  api.request=async(path,options)=>{captured={path,options};return null;};
+  await api.playPlaylist('spotify:playlist:abc123','spotify:track:def456','device123');
+  assert.equal(captured.path,'/me/player/play');
+  assert.deepEqual(captured.options.body,{context_uri:'spotify:playlist:abc123',offset:{uri:'spotify:track:def456'}});
+  assert.equal(captured.options.query.device_id,'device123');
+});
