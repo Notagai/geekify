@@ -424,7 +424,17 @@ function renderLyrics(){
       info.append(textNode('small','',((state.track.artist||'')+' · '+(state.track.album||'')).replace(/ · $/,'')));
       paper.append(info);
     }
-    if(!lines.length){paper.append(textNode('p','note',state.demo?'No lyrics for this demo.':'Lyrics unavailable for this track.'));return;}
+    if(!lines.length){
+      paper.append(textNode('p','note',state.demo?'No lyrics for this demo.':'No lyrics found'));
+      if(!state.demo&&state.track?.title){
+        // A discovery link, never scrape or silently import licensed lyrics.
+        const link=textNode('a','lyrics-search-link','Find lyrics on Genius');
+        link.href='https://genius.com/search?q='+encodeURIComponent([state.track.title,state.track.artist].filter(Boolean).join(' '));
+        link.target='_blank';link.rel='noopener noreferrer';
+        paper.append(link);
+      }
+      return;
+    }
     const holder=textNode('div','lyrics-scroll','');
     holder.setAttribute('aria-label','Scrolling song lyrics');
     lines.forEach((line,i)=>{
