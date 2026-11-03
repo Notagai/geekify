@@ -261,6 +261,18 @@ function button(cls,parent,text,fn){
   return n;
 }
 function send(name,extra={}){vscode.postMessage({type:'action',name,...extra});}
+function playPlaylist(extra={}){
+  // A real click is the user gesture required to unlock protected audio.
+  // The SDK registers a Connect device even if Spotify Desktop is closed.
+  if(sdkPlayer&&sdkDevice){
+    void sdkPlayer.activateElement().catch(error=>{
+      status.textContent='Geekify audio activation failed: '+error.message;
+    });
+    send('playPlaylist',{...extra,deviceId:sdkDevice});
+  }else{
+    send('playPlaylist',extra);
+  }
+}
 let state={demo:true,track:null,progressMs:0,playing:false,lyrics:[],items:[],queue:[],browseType:''};
 let activeTab='now',activeSub='lyrics',updatedAt=performance.now();
 let sdkPlayer=null,sdkDevice=null,tokenSequence=0,lyricSignature='',lastSearch='';
@@ -552,7 +564,7 @@ function renderList(items){
     const details=textNode('div','playlist-hero-details','');
     details.append(heading);
     details.append(textNode('small','secondary',(items||[]).length+' songs'));
-    button('playlist-play',details,'▶ Play playlist',()=>send('playPlaylist'));
+    button('playlist-play',details,'▶ Play playlist',()=>playPlaylist());
 
     hero.append(details);paper.append(hero);
   }else paper.append(heading);
@@ -658,7 +670,7 @@ function renderList(items){
     });
     else if(item.type==='device')itemButton.addEventListener('click',()=>send('transfer',{deviceId:item.id}));
     else if(item.type==='track')itemButton.addEventListener('click',()=>{
-      if(activeTab==='library'&&state.browseType==='playlist')send('playPlaylist',{uri:item.uri});
+      if(activeTab==='library'&&state.browseType==='playlist')playPlaylist({uri:item.uri});
       else send('playItem',{uri:item.uri});
     });
     else itemButton.addEventListener('click',()=>send('openResult',{uri:item.uri}));
@@ -862,7 +874,7 @@ window.addEventListener('message',event=>{
     else if(message.demo)status.textContent='Demo mode: connect Spotify to hear your music.';
     else if(!sdkDevice)status.textContent='Spotify connected. Trying in-panel playback…';
     redraw();
-    if(priorDemo&&!message.demo&&window.Spotify)initSdk();
+    if(!message.demo&&window.Spotify&&!sdkPlayer)initSdk();
   }
 });
 // Checkpoints: refresh on focus, visibility return, and periodic active listening.
