@@ -251,7 +251,8 @@ function send(name,extra={}){vscode.postMessage({type:'action',name,...extra});}
 let state={demo:true,track:null,progressMs:0,playing:false,lyrics:[],items:[],queue:[],browseType:''};
 let activeTab='now',activeSub='lyrics',updatedAt=performance.now();
 let sdkPlayer=null,sdkDevice=null,tokenSequence=0,lyricSignature='',lastSearch='';
-let lyricSize=Number(vscode.getState?.()?.lyricSize)||26;
+let lyricSize=28;
+let lyricNodes=[],lyricTrackKey='',lyricActiveIndex=-1;
 lyricSize=Math.max(18,Math.min(46,lyricSize));
 const tokens=new Map();
 
@@ -289,7 +290,7 @@ const navButtons=[];
 for(const [id,title] of navDefs){
   const b=button('nav-item section-tab',nav,undefined,()=>{
     activeTab=id;activeSub='lyrics';lyricSignature='';
-    if(id==='search')send('search',{query:lastSearch});
+    if(id==='search')send(lastSearch?'search':'daily',{query:lastSearch});
     if(id==='library'||id==='devices'||id==='management')send(id);
     redraw();
   });
@@ -317,6 +318,7 @@ const player=make('section','player-panel',frame);
 player.setAttribute('aria-label','Music playback');
 const artWrap=button('album-art-frame',player,undefined,()=>{
   const expanded=artWrap.classList.toggle('expanded');
+  player.classList.toggle('cover-expanded',expanded);
   artWrap.setAttribute('aria-expanded',String(expanded));
 });
 artWrap.setAttribute('aria-label','Expand playing song cover');
@@ -390,52 +392,40 @@ function textNode(tag,cls,text){
   const node=document.createElement(tag);node.className=cls;node.textContent=text;
   return node;
 }
-function lyricToolbar(){
-  const bar=textNode('div','lyric-toolbar','');
-  bar.append(textNode('span','lyric-size-label','Lyrics'));
-  const down=button('lyric-zoom',bar,'A−',()=>adjustLyricSize(-2));down.setAttribute('aria-label','Decrease lyrics size');
-  const value=textNode('span','lyric-size-value',lyricSize+'px');bar.append(value);
-  const up=button('lyric-zoom',bar,'A+',()=>adjustLyricSize(2));up.setAttribute('aria-label','Increase lyrics size');
-  return bar;
-}
-function adjustLyricSize(delta){
-  lyricSize=Math.max(18,Math.min(46,lyricSize+delta));
-  paper.style.setProperty('--lyric-size',lyricSize+'px');
-  vscode.setState?.({...(vscode.getState?.()||{}),lyricSize});
-  lyricSignature='';renderLyrics();
-}
 function renderLyrics(){
   const lines=state.lyrics||[];
+  const key=[state.track?.uri,state.lyricsStatus,lyricSize,lines.length,lines[0]?.text,lines.at(-1)?.text].join('|');
+  if(key!==lyricTrackKey){
+    lyricTrackKey=key;lyricActiveIndex=-1;lyricNodes=[];
+    paper.replaceChildren();
+    if(state.track){
+      const info=textNode('div','lyrics-song-info','');
+      info.append(textNode('strong','',state.track.title||''));
+      info.append(textNode('small','',((state.track.artist||'')+' · '+(state.track.album||'')).replace(/ · $/,'')));
+      paper.append(info);
+    }
+    if(!lines.length){paper.append(textNode('p','note',state.demo?'No lyrics for this demo.':'Lyrics unavailable for this track.'));return;}
+    const holder=textNode('div','lyrics-scroll','');
+    holder.setAttribute('aria-label','Scrolling song lyrics');
+    lines.forEach((line,i)=>{
+      const el=textNode('p','lyric lyric-row',line.text);
+      el.setAttribute('data-line',String(i));
+      lyricNodes.push(el);holder.append(el);
+    });
+    paper.append(holder);
+    if(state.lyricsStatus==='plain')paper.append(textNode('small','secondary','UNSYNCED LYRICS'));
+  }
+  if(state.lyricsStatus!=='synced'||!lyricNodes.length)return;
   const now=advance();
   let idx=0;
-  if(state.lyricsStatus==='synced')for(let i=0;i<lines.length;i++)if(lines[i].timeMs<=now)idx=i;
-  const shown=state.lyricsStatus==='plain'
-    ?lines.slice(0,6).map(x=>({text:x.text,active:false}))
-    :lines.slice(Math.max(0,idx-2),idx+3).map((x,i)=>({
-        text:x.text,active:Math.max(0,idx-2)+i===idx
-      }));
-  const signature=JSON.stringify({shown,lyricsStatus:state.lyricsStatus,title:state.track?.title,artist:state.track?.artist,album:state.track?.album,lyricSize});
-  if(signature===lyricSignature)return;
-  lyricSignature=signature;
-  paper.replaceChildren();
-  paper.append(lyricToolbar());
-  if(state.track){
-    const info=textNode('div','lyrics-song-info','');
-    info.append(textNode('strong','',state.track.title||''));
-    info.append(textNode('small','',((state.track.artist||'')+' · '+(state.track.album||'')).replace(/ · $/,'')));
-    paper.append(info);
-  }
-  if(!shown.length){
-    paper.append(textNode('p','note',state.demo?'Demo has no lyrics.':'Lyrics unavailable for this track.'));
-    return;
-  }
-  const holder=textNode('div','lyrics-lines','');
-  shown.forEach(line=>{
-    const el=textNode('p','lyric'+(line.active?' active':''),line.text);
-    holder.append(el);
-  });
-  paper.append(holder);
-  if(state.lyricsStatus==='plain')paper.append(textNode('small','secondary','UNSYNCED LYRICS'));
+  for(let i=0;i<lines.length;i++)if(lines[i].timeMs<=now)idx=i;
+  if(idx===lyricActiveIndex)return;
+  if(lyricNodes[lyricActiveIndex])lyricNodes[lyricActiveIndex].classList.remove('active');
+  lyricActiveIndex=idx;
+  const current=lyricNodes[idx];
+  current?.classList.add('active');
+  // Native smooth scrolling preserves every line and approximately four on either side.
+  current?.scrollIntoView?.({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'center'});
 }
 function spotifyImage(url){
   if(typeof url!=='string')return '';
@@ -485,7 +475,7 @@ function renderList(items){
   }else paper.append(heading);
   if(activeTab==='search'){
     const shortcuts=textNode('div','search-shortcuts','');
-    button('search-shortcut',shortcuts,'Daily Mixes',()=>send('daily'));
+    // Daily Mixes load automatically when Search opens.
     button('search-shortcut',shortcuts,'Recently Played',()=>send('recent'));
     paper.append(shortcuts);
     const input=document.createElement('input');input.className='search-input';
@@ -517,6 +507,12 @@ function renderList(items){
     button.append(labels);
     if(item.type==='folder'){
       const arrow=textNode('span','folder-chevron','');arrow.append(icon('chevron'));button.append(arrow);
+    }
+    if(item.type==='playlist'&&activeTab==='library'){
+      const pin=button('pin-playlist',button,(state.pinned||[]).some(x=>x.id===item.id)?'Unpin':'Pin',event=>{
+        event?.stopPropagation?.();send('togglePin',{id:item.id});
+      });
+      pin.setAttribute('aria-label','Pin or unpin playlist');
     }
     if(item.type==='track'&&activeTab!=='management'){
       const add=button('queue-add',button,'+ Queue',(event)=>{
@@ -576,6 +572,14 @@ function renderSettings(){
   paper.append(textNode('p','note','Playback device: '+(state.deviceName||'No active device')));
   if(state.deviceRestricted)paper.append(textNode('p','secondary','This device restricts remote playback commands.'));
   paper.append(textNode('p','secondary','In-panel audio permission: '+(state.canStream?'Authorized':'Not authorized')));
+  const lyricSettings=textNode('div','lyric-settings','');
+  lyricSettings.append(textNode('span','', 'Lyrics size'));
+  const minus=button('lyric-zoom',lyricSettings,'A−',()=>send('lyricsSize',{size:lyricSize-2}));
+  minus.setAttribute('aria-label','Decrease lyrics size');
+  lyricSettings.append(textNode('span','lyric-size-value',lyricSize+'px'));
+  const plus=button('lyric-zoom',lyricSettings,'A+',()=>send('lyricsSize',{size:lyricSize+2}));
+  plus.setAttribute('aria-label','Increase lyrics size');
+  paper.append(lyricSettings);
   paper.append(textNode('p','secondary','Changes below require Spotify playback permissions and a controllable device.'));
   const controls=textNode('div','settings-actions','');
   button('setting-control',controls,'Shuffle: '+(state.shuffle?'On':'Off'),()=>send('shuffle'));
@@ -592,6 +596,9 @@ function redraw(){
     button.setAttribute('tabindex',selected?'0':'-1');
   });
   const song=state.track||{};
+  if(Number.isFinite(Number(state.lyricSize))&&state.lyricSize!==lyricSize){
+    lyricSize=state.lyricSize;paper.style.setProperty('--lyric-size',lyricSize+'px');lyricTrackKey='';
+  }
   board.classList.toggle('is-playing',Boolean(state.playing));
   title.textContent=truncate(song.title||'Nothing playing',50);
   artist.textContent=truncate(song.artist||'Search Spotify to begin',55);
