@@ -548,3 +548,9 @@ body{font-size:20px;}
 .playlist-menu.playlist-menu-floating{position:fixed!important;top:auto;right:auto!important;z-index:2147483000!important}
 .playlist-play{display:inline-block;margin:8px 0;padding:7px 14px;background:#e5b88d;color:#4a291a;border:2px solid #885938;border-radius:4px;font:inherit;cursor:pointer}
 .playlist-play:hover,.playlist-play:focus-visible{background:#c99364}
+
+/* Universal Search: compact category filters, wrapping on narrow panels. */
+.search-filters{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px}
+.search-filter{padding:6px 10px;min-height:30px;border:1px solid #966d4a;border-radius:5px;background:#f3d8b3;color:#50301d;font:inherit;cursor:pointer}
+.search-filter:hover,.search-filter:focus-visible{background:#e4bc91}
+.search-filter.selected{background:#895331;color:#fff1d4;border-color:#55321f;box-shadow:inset 0 -2px 0 #5e361e}

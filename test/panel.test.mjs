@@ -186,3 +186,16 @@ test('playlist playback uses the embedded Spotify device instead of requiring De
  assert.ok(ext.includes('await api.playUri(context,targetDevice)'));
  assert.ok(ext.includes('await api.playPlaylist(context,selected.uri,targetDevice)'));
 });
+
+test('universal search supports Spotify categories, saved library and live query',()=>{
+ const ui=readFileSync(resolve(root,'vscode/panel.js'),'utf8');
+ const extension=readFileSync(resolve(root,'vscode/extension.cjs'),'utf8');
+ for(const filter of ['Songs','Artists','Albums','Playlists','Podcasts','Episodes','Your Library'])
+   assert.ok(ui.includes("'"+filter+"'"),filter);
+ assert.ok(ui.includes("searchTimer=setTimeout("));
+ assert.ok(ui.includes("searchFilter==='library'?'library':'spotify'"));
+ assert.ok(extension.includes("source==='library'"));
+ assert.ok(extension.includes('api.allPlaylists()'));
+ assert.ok(extension.includes('api.saved()'));
+ assert.ok(extension.includes("await browse(name,message.query,message.source)"));
+});
