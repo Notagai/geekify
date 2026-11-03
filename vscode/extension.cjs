@@ -316,19 +316,33 @@ async function openPanel(context,forceDemo=false){
       if(controlBusy)return;
       controlBusy=true;
       try{
-        // Read actual Spotify state, not a possibly stale panel state.
         const before=await api.playback();
-        if(before){playback=before;playing=Boolean(before.is_playing);}
+        if(!before?.device)throw new Error('No active Spotify device.');
+        playback=before;playing=Boolean(before.is_playing);
         const target=!playing;
-        await api.playPause(playing,device());
-        // Check Spotify's acknowledgement by reading playback, never by issuing
-        // duplicate toggles (which could undo the first successful command).
-        await poll();
-        if(playing!==target){
-          await new Promise(resolve=>setTimeout(resolve,350));
-          await poll();
+        const targetDevice=before.device.id;
+        let confirmed=false,lastError=null;
+        // Re-issue the same desired state, never an inverse toggle. A rejected
+        // command must not leave the UI believing it succeeded.
+        for(let attempt=0;attempt<2;attempt++){
+          try{await api.playPause(!target,targetDevice);lastError=null;}
+          catch(error){
+            lastError=error;
+            if(error?.status===429||error?.status===401||error?.status===403&&
+              !/restriction violated/i.test(String(error.message)))break;
+          }
+          await new Promise(resolve=>setTimeout(resolve,attempt===0?450:650));
+          const observed=await api.playback();
+          if(observed){
+            playback=observed;
+            playing=Boolean(observed.is_playing);
+            if(observed.device?.id!==targetDevice)break;
+            if(playing===target){confirmed=true;break;}
+          }
         }
-        lastControlAt=Date.now();
+        await poll();
+        if(!confirmed)throw lastError||new Error('Spotify did not confirm '+(target?'Play':'Pause')+'. Playback state refreshed.');
+        notice='';
       }finally{controlBusy=false;}
     }
     else if(name==='next')await api.next(device());
