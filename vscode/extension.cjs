@@ -17,7 +17,7 @@ const DEMO_LYRICS=[
   {timeMs:112000,text:'the city keeps glowing'}
 ];
 const allowedActions=new Set(['toggle','next','previous','seek','save','shuffle','repeat',
-  'playItem','openResult','togglePin','lyricsSize','planTrack','movePlanned','removePlanned','submitPlan','management','transfer','search','daily','recent','library','libraryFolder','libraryBack','playlist','retryPlaylist','devices','queue','openWeb','refresh']);
+  'playItem','openResult','togglePin','openPlaylistInSpotify','lyricsSize','planTrack','movePlanned','removePlanned','submitPlan','management','transfer','search','daily','recent','library','libraryFolder','libraryBack','playlist','retryPlaylist','devices','queue','openWeb','refresh']);
 const safeError=e=>String(e?.message||e).replace(/[\x00-\x1f\x7f-\x9f]/g,' ').slice(0,175);
 
 let activePanel;
@@ -81,7 +81,7 @@ async function openPanel(context,forceDemo=false){
   let lyrics=demo?DEMO_LYRICS:[],lyricsStatus=demo?'synced':'missing';
   let playback=null,repeat='off',shuffle=false,deviceName='',deviceRestricted=false;
   let controlBusy=false,lastControlAt=0;
-  let queue=[],items=[],browseType='',playlist=null,notice='',browseError='',browseLoading=false,planned=[];
+  let queue=[],items=[],browseType='',playlist=null,notice='',browseError='',browseLoading=false,playlistRowsReceived=0,planned=[];
   let browseRequestId=0;
   const settingsPath=join(homedir(),'.geekify','settings.json');
   function readSettings(){
@@ -98,7 +98,7 @@ async function openPanel(context,forceDemo=false){
   function emit(){
     const scopes=String(auth.loadConfig().token?.scope||'').split(/\s+/);
     send({type:'state',demo,track,playing,progressMs,lyrics,lyricsStatus,
-      queue,planned,items,browseType,browseError,browseLoading,lyricSize:localSettings.lyricSize,pinned:localSettings.pinned,
+      queue,planned,items,browseType,browseError,browseLoading,playlistRowsReceived,lyricSize:localSettings.lyricSize,pinned:localSettings.pinned,
       playlistName:playlist?.name||'',
       playlistImageUrl:playlist?.imageUrl||'',notice,repeat,shuffle,
       deviceName,deviceRestricted,deviceId:playback?.device?.id||'',
@@ -167,6 +167,7 @@ async function openPanel(context,forceDemo=false){
   async function browse(type,query){
     const requestId=++browseRequestId;
     browseError='';browseLoading=false;
+    if(type==='playlist')playlistRowsReceived=0;
     if(demo){notice='Log in with geekify login to browse Spotify.';emit();return;}
     let response;
     if(type==='search'||type==='daily'){
@@ -221,10 +222,13 @@ async function openPanel(context,forceDemo=false){
     }
     else if(type==='playlist'){
       try{
-        response=spotify.playlistTrackItems(await api.allPlaylistItems(playlist.id));
+        const payload=await api.allPlaylistItems(playlist.id);
+        playlistRowsReceived=payload.items.length;
+        response=spotify.playlistTrackItems(payload);
       }catch(error){
         if(requestId!==browseRequestId)return;
         browseError=safeError(error);
+        playlistRowsReceived=(error.partialItems||[]).length;
         response=spotify.playlistTrackItems({items:error.partialItems||[]});
       }
     }
@@ -269,6 +273,11 @@ async function openPanel(context,forceDemo=false){
       const size=Number(message.size);
       if(Number.isFinite(size))localSettings.lyricSize=Math.max(18,Math.min(46,Math.round(size)));
       saveSettings();emit();return;
+    }
+    if(name==='openPlaylistInSpotify'){
+      if(playlist?.id&&/^[A-Za-z0-9]+$/.test(playlist.id))
+        await vscode.env.openExternal(vscode.Uri.parse('https://open.spotify.com/playlist/'+playlist.id));
+      return;
     }
     if(name==='togglePin'){
       if(typeof message.id!=='string'||!/^[A-Za-z0-9]+$/.test(message.id))return;

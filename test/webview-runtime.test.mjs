@@ -102,7 +102,29 @@ test('responsive player bootstraps and renders state with a mocked VS Code DOM',
     ...(node.children||[]).flatMap(child=>collect(child,predicate))
   ];
   assert.equal(collect(uiRoot,node=>node.className==='item-row').length,68);
-  assert.equal(collect(uiRoot,node=>node.className==='pin-playlist').length,68);
+  assert.equal(collect(uiRoot,node=>node.className==='playlist-more').length,68);
+  const menuButton=collect(uiRoot,node=>node.className==='playlist-more')[0];
+  menuButton.handlers.click();
+  const menuAction=collect(uiRoot,node=>node.className==='playlist-menu-action')[0];
+  assert.equal(menuAction.textContent,'Pin');
+  menuAction.handlers.click();
+  assert.ok(calls.some(call=>call.name==='togglePin'&&call.id==='playlist0'));
+  // A pinned playlist must require two clicks on Unpin, not an immediate mutation.
+  listeners.message({data:{
+    type:'state',demo:false,track:null,playing:false,progressMs:0,
+    lyricsStatus:'missing',lyrics:[],items:playlists,
+    browseType:'library-playlists',browseLoading:false,browseError:'',
+    pinned:[{id:'playlist0',title:'My Playlist 0'}],queue:[],canStream:false
+  }});
+  collect(uiRoot,node=>node.className==='playlist-more')[0].handlers.click();
+  const unpin=collect(uiRoot,node=>node.className==='playlist-menu-action')[0];
+  assert.equal(unpin.textContent,'Unpin');
+  const before=calls.filter(call=>call.name==='togglePin').length;
+  unpin.handlers.click();
+  assert.equal(unpin.textContent,'Confirm unpin');
+  assert.equal(calls.filter(call=>call.name==='togglePin').length,before);
+  unpin.handlers.click();
+  assert.equal(calls.filter(call=>call.name==='togglePin').length,before+1);
   const firstRow=collect(uiRoot,node=>node.className==='item-row')[0];
   assert.ok(firstRow.children[0].handlers.click,'playlist must be clickable');
   const paper=walk(uiRoot,node=>node.className==='paper-content');

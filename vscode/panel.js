@@ -483,6 +483,7 @@ function coverImage(url,cls,alt){
   return wrap;
 }
 let playlistSearchQuery='';
+let openPlaylistMenu=null;
 let renderedListView='';
 function renderList(items){
   const view=[activeTab,state.browseType,state.playlistId||''].join('|');
@@ -493,6 +494,7 @@ function renderList(items){
   const previousList=paper.querySelector?.('.list');
   const previousListScroll=sameView&&previousList?previousList.scrollTop:0;
   renderedListView=view;
+  openPlaylistMenu=null;
   paper.replaceChildren();
   const libraryOpen=activeTab==='library'&&state.browseType!=='library';
   if(libraryOpen){
@@ -594,10 +596,32 @@ function renderList(items){
       const arrow=textNode('span','folder-chevron','');arrow.append(icon('chevron'));itemButton.append(arrow);
     }
     if(item.type==='playlist'&&activeTab==='library'){
-      const pin=button('pin-playlist',row,(state.pinned||[]).some(x=>x.id===item.id)?'Unpin':'Pin',event=>{
-        event?.stopPropagation?.();send('togglePin',{id:item.id});
+      const pinned=(state.pinned||[]).some(x=>x.id===item.id);
+      const actions=textNode('div','playlist-actions','');
+      row.append(actions);
+      const menuButton=button('playlist-more',actions,'⋯',()=>{
+        if(openPlaylistMenu&&openPlaylistMenu!==actions){
+          openPlaylistMenu.querySelector('.playlist-menu')?.remove();
+        }
+        const existing=actions.querySelector('.playlist-menu');
+        if(existing){existing.remove();openPlaylistMenu=null;return;}
+        openPlaylistMenu=actions;
+        const menu=textNode('div','playlist-menu','');
+        actions.append(menu);
+        const action=button('playlist-menu-action',menu,pinned?'Unpin':'Pin',()=>{
+          if(pinned&&!action.dataset.confirming){
+            action.dataset.confirming='true';
+            action.textContent='Confirm unpin';
+            action.setAttribute('aria-label','Confirm unpin playlist');
+            return;
+          }
+          openPlaylistMenu=null;
+          send('togglePin',{id:item.id});
+        });
+        action.setAttribute('aria-label',pinned?'Unpin playlist':'Pin playlist');
       });
-      pin.setAttribute('aria-label','Pin or unpin playlist');
+      menuButton.setAttribute('aria-label','Playlist options for '+(item.title||'playlist'));
+      menuButton.setAttribute('aria-haspopup','true');
     }
     if(item.type==='track'&&activeTab!=='management'){
       const add=button('queue-add',row,'+ Queue',(event)=>{
@@ -628,10 +652,19 @@ function renderList(items){
     list.append(textNode('p','note','Could not load all playlist tracks: '+state.browseError));
     button('setting-control',list,'Retry playlist tracks',()=>send('retryPlaylist'));
   }
-  if(!items?.length&&!(activeTab==='library'&&state.browseType==='library-playlists'))
-    list.append(textNode('p','secondary',
-      activeTab==='library'&&state.browseType==='playlist'?'No playable tracks returned for this playlist.':
-      activeTab==='devices'?'No devices returned by Spotify.':'No tracks here yet.'));
+  if(!items?.length&&!(activeTab==='library'&&state.browseType==='library-playlists')){
+    const playlistEmpty=activeTab==='library'&&state.browseType==='playlist';
+    const received=Number(state.playlistRowsReceived)||0;
+    list.append(textNode('p','secondary',playlistEmpty
+      ?state.browseError?'Spotify could not load this playlist. See the error above.'
+        :received?'Spotify returned '+received+' playlist entries, but none had playable track details.'
+          :'Spotify returned zero playlist entries for this account or playlist.'
+      :activeTab==='devices'?'No devices returned by Spotify.':'No tracks here yet.'));
+    if(playlistEmpty){
+      button('setting-control',list,'Retry playlist tracks',()=>send('retryPlaylist'));
+      button('setting-control',list,'Open playlist in Spotify',()=>send('openPlaylistInSpotify'));
+    }
+  }
 }
 function managementSong(item,idx,planned){
   const row=textNode('div','management-song','');
