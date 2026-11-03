@@ -147,6 +147,13 @@ export class SpotifyApi {
     if(!uri||!/^spotify:(?:track|album|playlist):[A-Za-z0-9]+$/.test(uri))throw new Error('Invalid Spotify URI.');
     return this.request('/me/player/play',{method:'PUT',body:uri.startsWith('spotify:track:')?{uris:[uri]}:{context_uri:uri},query:deviceId?{device_id:deviceId}:undefined});
   }
+  async playPlaylist(contextUri,trackUri,deviceId){
+    if(!/^spotify:playlist:[A-Za-z0-9]+$/.test(contextUri))throw new Error('Invalid playlist URI.');
+    if(!/^spotify:track:[A-Za-z0-9]+$/.test(trackUri))throw new Error('Invalid track URI.');
+    return this.request('/me/player/play',{method:'PUT',
+      body:{context_uri:contextUri,offset:{uri:trackUri}},
+      query:deviceId?{device_id:deviceId}:undefined});
+  }
   async transfer(id) {
     if(!id)throw new Error('This device does not have a transferable ID.');
     return this.request('/me/player',{method:'PUT',body:{device_ids:[id],play:true}});
