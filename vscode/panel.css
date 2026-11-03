@@ -540,6 +540,6 @@ body{font-size:20px;}
 .playlist-menu-action:hover,.playlist-menu-action:focus-visible{background:#dfb78c}
 
 /* A fixed portal escapes the scrolling list's clipping and row stacking contexts. */
-.playlist-menu-floating{position:fixed!important;right:auto!important;top:auto;z-index:2147483000!important;min-width:158px;max-width:calc(100vw - 16px);box-sizing:border-box}
+.playlist-menu-floating{position:fixed!important;right:auto!important;z-index:2147483000!important;min-width:158px;max-width:calc(100vw - 16px);box-sizing:border-box}
 .item-row:has(.playlist-more:hover),.item-row:has(.playlist-more:focus-visible){background:#dfb78c88}
 .playlist-more:hover,.playlist-more:focus-visible{background:#ca966b!important;border-color:#6e442b;box-shadow:0 0 0 2px #9c684c44}
