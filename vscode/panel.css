@@ -471,3 +471,21 @@ body{font-size:20px;}
  .parchment-decor .decor-flowers{width:31px;height:31px;}
  .parchment-decor .decor-photo{width:37px;height:32px;}
 }
+
+/* Scrolling lyrics: keep the full text mounted instead of fading/rebuilding it. */
+.lyrics-scroll{display:flex;flex-direction:column;gap:clamp(8px,1vh,15px);overflow:visible;
+ padding-block:clamp(90px,24vh,220px);min-height:100%;}
+.lyric-row{font-size:var(--lyric-size,28px);line-height:1.18;white-space:normal;
+ overflow-wrap:anywhere;opacity:.65;transition:color 230ms ease,opacity 230ms ease,background-color 230ms ease;
+ animation:none!important;}
+.lyric-row.active{opacity:1;color:#442819;transform:none;}
+.lyric-settings{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px 0 18px;}
+.lyric-size-value{min-width:60px;text-align:center;}
+.pin-playlist{flex:none;white-space:nowrap;background:#e7c094;color:#674124;border:2px solid #9c6a47;padding:3px 12px;}
+.player-panel.cover-expanded{grid-template-columns:minmax(235px,310px) minmax(150px,1fr) minmax(230px,1.3fr);}
+.player-panel.cover-expanded .song-info{margin-left:0;align-self:center;}
+.player-panel.cover-expanded .album-art-frame{z-index:15;}
+@media(max-width:900px) and (min-width:691px){.player-panel.cover-expanded{grid-template-columns:195px minmax(110px,1fr) minmax(195px,1fr);}}
+@media(max-width:690px){.player-panel.cover-expanded{grid-template-columns:135px minmax(0,1fr);grid-template-areas:"album song" "controls controls";}
+ .player-panel.cover-expanded .album-art-frame{transform:scale(1.65);}}
+@media(prefers-reduced-motion:reduce){.lyric-row{transition:none;}}
