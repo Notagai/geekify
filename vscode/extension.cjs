@@ -80,7 +80,6 @@ async function openPanel(context,forceDemo=false){
   let track=demo?DEMO:null,playing=demo,progressMs=demo?75000:0;
   let lyrics=demo?DEMO_LYRICS:[],lyricsStatus=demo?'synced':'missing';
   let playback=null,repeat='off',shuffle=false,deviceName='',deviceRestricted=false;
-  let blockedDeviceId='',blockedUntil=0;
   let queue=[],items=[],browseType='',playlist=null,notice='',planned=[];
   const settingsPath=join(homedir(),'.geekify','settings.json');
   function readSettings(){
@@ -139,8 +138,7 @@ async function openPanel(context,forceDemo=false){
       if(closed||demo)return;
       playback=state;playing=Boolean(state?.is_playing);
       deviceName=String(state?.device?.name||'No active device').slice(0,80);
-      deviceRestricted=Boolean(state?.device?.is_restricted)||Boolean(blockedDeviceId&&blockedDeviceId===state?.device?.id&&Date.now()<blockedUntil);
-      if(state?.device?.id!==blockedDeviceId||Date.now()>=blockedUntil){blockedDeviceId='';blockedUntil=0;}
+      deviceRestricted=Boolean(state?.device?.is_restricted);
       progressMs=state?.progress_ms||0;repeat=state?.repeat_state||'off';
       shuffle=Boolean(state?.shuffle_state);
       track=spotify.trackInfo(state?.item);
@@ -150,7 +148,7 @@ async function openPanel(context,forceDemo=false){
         lyricAbort?.abort();lyrics=[];lyricsStatus='missing';
         if(track)void loadLyrics(track);
       }
-      if(!blockedUntil)notice='';
+      notice='';
       emit();
     }catch(error){
       notice=safeError(error);nextDelay=Math.max(5000,(error.retryAfter||5)*1000);
@@ -342,12 +340,8 @@ async function openPanel(context,forceDemo=false){
     if(message.type==='action'){
       try{await act(message);}
       catch(error){
-        if(error?.status===403&&/restriction violated/i.test(String(error.message))){
-          blockedDeviceId=device()||'';
-          blockedUntil=Date.now()+15000;
-          deviceRestricted=true;
-          notice='Spotify blocked remote control of '+deviceName+'. You can keep listening with your phone EQ, but playback must be controlled on the phone.';
-        }else notice=safeError(error);
+        // Show Spotify's actual error; do not impose a client-side cooldown.
+        notice=safeError(error);
         emit();
       }
     }
