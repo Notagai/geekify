@@ -374,12 +374,40 @@ function renderLyrics(){
   paper.append(holder);
   if(state.lyricsStatus==='plain')paper.append(textNode('small','secondary','UNSYNCED LYRICS'));
 }
+function spotifyImage(url){
+  if(typeof url!=='string')return '';
+  try{
+    const parsed=new URL(url);
+    const host=parsed.hostname.toLowerCase();
+    return parsed.protocol==='https:' &&
+      (host==='i.scdn.co'||host==='mosaic.scdn.co'||
+        host.endsWith('.spotifycdn.com')) ? parsed.href : '';
+  }catch{return '';}
+}
+function coverImage(url,cls,alt){
+  const wrap=document.createElement('span');wrap.className='playlist-cover '+cls;
+  const img=document.createElement('img');img.alt=alt;
+  img.loading='lazy';img.decoding='async';
+  img.src=spotifyImage(url)||assets['player/default-cover'];
+  img.addEventListener('error',()=>{
+    if(img.src!==assets['player/default-cover'])img.src=assets['player/default-cover'];
+  });
+  wrap.append(img);
+  return wrap;
+}
 function renderList(items){
   paper.replaceChildren();
   const heading=textNode('div','title-line',activeTab==='search'?'SEARCH':
     activeTab==='library'?'LIKED SONGS':activeTab==='playlists'?(state.playlistName||'YOUR PLAYLISTS'):
       activeTab==='devices'?'DEVICES':'UP NEXT');
-  paper.append(heading);
+  if(activeTab==='playlists'&&state.browseType==='playlist'){
+    const hero=textNode('div','playlist-hero','');
+    hero.append(coverImage(state.playlistImageUrl,'playlist-hero-cover','Playlist cover'));
+    const details=textNode('div','playlist-hero-details','');
+    details.append(heading);
+    details.append(textNode('small','secondary',(items||[]).length+' songs'));
+    hero.append(details);paper.append(hero);
+  }else paper.append(heading);
   if(activeTab==='search'){
     const input=document.createElement('input');input.className='search-input';
     input.placeholder='Search tracks…';input.setAttribute('aria-label','Search Spotify');
@@ -397,8 +425,14 @@ function renderList(items){
   const list=textNode('div','list','');paper.append(list);
   (items||[]).slice(0,25).forEach(item=>{
     const button=textNode('button','item','');
-    button.type='button';button.append(textNode('span','',truncate(item.title,42)));
-    button.append(textNode('small','',truncate(item.subtitle,28)));
+    button.type='button';
+    if(item.type==='playlist'||item.type==='track'){
+      button.append(coverImage(item.imageUrl,'playlist-row-cover',item.type==='playlist'?'Playlist cover':'Album cover'));
+    }
+    const labels=textNode('span','item-labels','');
+    labels.append(textNode('span','item-title',truncate(item.title,70)));
+    labels.append(textNode('small','item-subtitle',truncate(item.subtitle,60)));
+    button.append(labels);
     if(item.type==='playlist')button.addEventListener('click',()=>send('playlist',{id:item.id}));
     else if(item.type==='device')button.addEventListener('click',()=>send('transfer',{deviceId:item.id}));
     else button.addEventListener('click',()=>send('playItem',{uri:item.uri}));
