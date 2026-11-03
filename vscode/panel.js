@@ -425,7 +425,7 @@ function renderLyrics(){
   const current=lyricNodes[idx];
   current?.classList.add('active');
   // Native smooth scrolling preserves every line and approximately four on either side.
-  current?.scrollIntoView?.({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'center'});
+  current?.scrollIntoView?.({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches?'instant':'smooth',block:'center'});
 }
 function spotifyImage(url){
   if(typeof url!=='string')return '';
@@ -493,8 +493,9 @@ function renderList(items){
   }
   const list=textNode('div','list','');paper.append(list);
   (items||[]).slice(0,25).forEach(item=>{
+    const row=textNode('div','item-row','');
     const button=textNode('button','item','');
-    button.type='button';
+    button.type='button';row.append(button);
     if(item.type==='folder'){
       const folder=textNode('span','folder-icon','');folder.append(icon('folder'));button.append(folder);
       button.className+=' folder-item';
@@ -509,13 +510,13 @@ function renderList(items){
       const arrow=textNode('span','folder-chevron','');arrow.append(icon('chevron'));button.append(arrow);
     }
     if(item.type==='playlist'&&activeTab==='library'){
-      const pin=button('pin-playlist',button,(state.pinned||[]).some(x=>x.id===item.id)?'Unpin':'Pin',event=>{
+      const pin=button('pin-playlist',row,(state.pinned||[]).some(x=>x.id===item.id)?'Unpin':'Pin',event=>{
         event?.stopPropagation?.();send('togglePin',{id:item.id});
       });
       pin.setAttribute('aria-label','Pin or unpin playlist');
     }
     if(item.type==='track'&&activeTab!=='management'){
-      const add=button('queue-add',button,'+ Queue',(event)=>{
+      const add=button('queue-add',row,'+ Queue',(event)=>{
         event?.stopPropagation?.();send('planTrack',{uri:item.uri});
       });
       add.title='Add to Geekify play-next plan';
@@ -528,7 +529,7 @@ function renderList(items){
     else if(item.type==='device')button.addEventListener('click',()=>send('transfer',{deviceId:item.id}));
     else if(item.type==='track')button.addEventListener('click',()=>send('playItem',{uri:item.uri}));
     else button.addEventListener('click',()=>send('openResult',{uri:item.uri}));
-    list.append(button);
+    list.append(row);
   });
   if(!items?.length)list.append(textNode('p','secondary','No tracks here yet.'));
 }
