@@ -124,3 +124,21 @@ test('device status, search shortcuts and expandable art implemented',()=>{
  assert.ok(ui.includes("Expand playing song cover"));
  assert.ok(css.includes('.album-art-frame.expanded{transform:scale(2)'));
 });
+
+test('management, VT323 and stable lyric size are wired',()=>{
+ const ext=readFileSync(resolve(root,'vscode/extension.cjs'),'utf8');
+ const ui=readFileSync(resolve(root,'vscode/panel.js'),'utf8');
+ const css=readFileSync(resolve(root,'vscode/panel.css'),'utf8');
+ const html=readFileSync(resolve(root,'vscode/panel.html'),'utf8');
+ const api=readFileSync(resolve(root,'cli/spotify.mjs'),'utf8');
+ assert.ok(ui.includes("['management','Management']"));
+ assert.ok(ui.includes("vscode.setState?.("));
+ assert.ok(ui.includes("renderManagement()"));
+ assert.ok(ui.includes("renderSettings()"));
+ assert.ok(ext.includes("planned.push("));
+ assert.ok(ext.includes("planned.shift()"));
+ assert.ok(api.includes("async addToQueue("));
+ assert.ok(css.includes('var(--lyric-size,26px)'));
+ assert.ok(html.includes('family=VT323'));
+ assert.ok(!ui.includes("'Run geekify login to authorize Spotify with streaming access.'"));
+});
