@@ -510,3 +510,9 @@ body{font-size:20px;}
 .paper-content.unsynced-lyrics{overflow-y:auto;scrollbar-width:thin;overscroll-behavior:contain;}
 .lyrics-scroll.plain-lyrics{padding-block:8px 48px;min-height:0;gap:11px;}
 .lyrics-scroll.plain-lyrics .lyric-row{opacity:1;animation:none!important;}
+
+/* Playback modes are persistent, reflecting Spotify-confirmed state. */
+.transport{position:relative}
+.transport.mode-active{background:#dfb77e!important;border-color:#52331f!important;box-shadow:inset 2px 3px 0 #98633e,0 0 0 2px #f4d89c;filter:saturate(1.25)}
+.transport.mode-active .pixel-icon{color:#432617;fill:#432617}
+.repeat-one-label{position:absolute;right:2px;bottom:1px;font-size:12px;line-height:1;font-weight:900;color:#432617;background:#f3d8a6;padding:0 2px;border:1px solid #86532c}
