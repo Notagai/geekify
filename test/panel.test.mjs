@@ -78,3 +78,19 @@ test('wood-and-ivy branding and all navigation icons use complete pixel sprites'
   assert.ok(ui.includes("pixel.setAttribute('width',String(end-x))"));
   assert.ok(css.includes('shape-rendering:crispEdges'));
 });
+
+test('Spotify playlist images are forwarded and rendered with safe album-art fallbacks',()=>{
+  const extension=readFileSync(resolve(root,'vscode/extension.cjs'),'utf8');
+  const ui=readFileSync(resolve(root,'vscode/panel.js'),'utf8');
+  const css=readFileSync(resolve(root,'vscode/panel.css'),'utf8');
+  const html=readFileSync(resolve(root,'vscode/panel.html'),'utf8');
+  assert.ok(extension.includes("imageUrl:item.images?.[0]?.url||''"));
+  assert.ok(extension.includes("imageUrl:t.imageUrl||''"));
+  assert.ok(extension.includes("playlistImageUrl:playlist?.imageUrl||''"));
+  assert.ok(ui.includes("coverImage(item.imageUrl,'playlist-row-cover'"));
+  assert.ok(ui.includes("coverImage(state.playlistImageUrl,'playlist-hero-cover'"));
+  assert.ok(ui.includes("img.src=spotifyImage(url)||assets['player/default-cover']"));
+  assert.ok(css.includes('.playlist-hero-cover'));
+  assert.ok(css.includes('.playlist-row-cover'));
+  assert.ok(html.includes('https://*.spotifycdn.com'));
+});
