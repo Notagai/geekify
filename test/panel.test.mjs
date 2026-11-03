@@ -199,3 +199,13 @@ test('universal search supports Spotify categories, saved library and live query
  assert.ok(extension.includes('api.saved()'));
  assert.ok(extension.includes("await browse(name,message.query,message.source)"));
 });
+
+test('decorative leaves stay noninteractive and motion respects accessibility preferences',()=>{
+ const ui=readFileSync(resolve(root,'vscode/panel.js'),'utf8');
+ const css=readFileSync(resolve(root,'vscode/panel.css'),'utf8');
+ assert.ok(ui.includes("edgeFoliage.setAttribute('aria-hidden','true')"));
+ assert.ok(ui.includes("['top-left','top-right','bottom-left','bottom-right']"));
+ assert.match(css,/\.edge-foliage\{[^}]*pointer-events:none/);
+ assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
+ assert.match(css,/\.playlist-menu-floating\{animation:leaf-menu-in/);
+});
