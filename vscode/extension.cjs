@@ -80,6 +80,7 @@ async function openPanel(context,forceDemo=false){
   let track=demo?DEMO:null,playing=demo,progressMs=demo?75000:0;
   let lyrics=demo?DEMO_LYRICS:[],lyricsStatus=demo?'synced':'missing';
   let playback=null,repeat='off',shuffle=false,deviceName='',deviceRestricted=false;
+  let controlBusy=false,lastControlAt=0;
   let queue=[],items=[],browseType='',playlist=null,notice='',planned=[];
   const settingsPath=join(homedir(),'.geekify','settings.json');
   function readSettings(){
@@ -311,7 +312,25 @@ async function openPanel(context,forceDemo=false){
       const item=items.find(x=>x.type==='track'&&x.uri===message.uri);
       if(!item)throw new Error('Track not found in the current list.');
       await api.playUri(item.uri,device());
-    }else if(name==='toggle')await api.playPause(playing,device());
+    }else if(name==='toggle'){
+      if(controlBusy)return;
+      controlBusy=true;
+      try{
+        // Read actual Spotify state, not a possibly stale panel state.
+        const before=await api.playback();
+        if(before){playback=before;playing=Boolean(before.is_playing);}
+        const target=!playing;
+        await api.playPause(playing,device());
+        // Check Spotify's acknowledgement by reading playback, never by issuing
+        // duplicate toggles (which could undo the first successful command).
+        await poll();
+        if(playing!==target){
+          await new Promise(resolve=>setTimeout(resolve,350));
+          await poll();
+        }
+        lastControlAt=Date.now();
+      }finally{controlBusy=false;}
+    }
     else if(name==='next')await api.next(device());
     else if(name==='previous')await api.previous(device());
     else if(name==='seek'){
