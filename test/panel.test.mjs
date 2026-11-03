@@ -157,3 +157,22 @@ test('six full-width section tabs are ordered correctly without a second tab bar
  assert.ok(css.includes('.workspace{display:flex!important;flex-direction:column'));
  assert.ok(css.includes('.parchment{flex:1 1 auto;'));
 });
+
+test('settings file, default lyric size, pinned playlists and scrolling renderer are wired',()=>{
+ const ui=readFileSync(resolve(root,'vscode/panel.js'),'utf8');
+ const extension=readFileSync(resolve(root,'vscode/extension.cjs'),'utf8');
+ const css=readFileSync(resolve(root,'vscode/panel.css'),'utf8');
+ assert.ok(extension.includes("'settings.json'"));
+ assert.ok(extension.includes('lyricSize:28,pinned:[]'));
+ assert.ok(extension.includes("name==='togglePin'"));
+ assert.ok(extension.includes("name==='lyricsSize'"));
+ assert.ok(extension.includes('...localSettings.pinned.map('));
+ assert.ok(ui.includes("current?.scrollIntoView?.("));
+ assert.ok(ui.includes("block:'center'"));
+ assert.ok(ui.includes("const row=textNode('div','item-row','')"));
+ assert.ok(ui.includes("button('pin-playlist',row,"));
+ assert.ok(ui.includes("button('queue-add',row,"));
+ assert.ok(ui.includes("send(lastSearch?'search':'daily'"));
+ assert.ok(ui.includes("player.classList.toggle('cover-expanded'"));
+ assert.ok(css.includes('.player-panel.cover-expanded'));
+});
