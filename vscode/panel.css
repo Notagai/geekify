@@ -530,3 +530,11 @@ body{font-size:20px;}
 /* Playlist filtering must override row display rules. */
 .item-row[hidden], .playlist-filter-empty[hidden]{display:none!important}
 .playlist-search{display:block;width:100%;margin:8px 0 10px}
+
+/* Playlist actions are separate from the row's navigation button. */
+.playlist-actions{position:relative;flex:none;align-self:center;z-index:3}
+.playlist-more{border:1px solid #986f4d;background:#f1d3aa;color:#53301d;min-width:36px;min-height:34px;border-radius:4px;font-size:24px;line-height:1;cursor:pointer}
+.playlist-more:hover,.playlist-more:focus-visible{background:#dfb78c}
+.playlist-menu{position:absolute;right:0;top:100%;z-index:20;min-width:158px;padding:5px;background:#f4d9b5;border:2px solid #86583a;box-shadow:3px 4px 0 #422b20}
+.playlist-menu-action{display:block;width:100%;border:0;background:transparent;color:#53301d;text-align:left;padding:9px;cursor:pointer;white-space:nowrap}
+.playlist-menu-action:hover,.playlist-menu-action:focus-visible{background:#dfb78c}
