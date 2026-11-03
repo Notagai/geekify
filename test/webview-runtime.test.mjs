@@ -80,4 +80,26 @@ test('responsive player bootstraps and renders state with a mocked VS Code DOM',
   const controls=walk(uiRoot,node=>node.attrs?.['aria-label']==='Pause');
   assert.ok(controls,'rendered pause control should be accessible');
   assert.equal(controls.tag,'button');
+  // Regression: Spotify returned playlists, but a local variable named
+  // "button" shadowed the button() helper and crashed on the first Pin action.
+  const library=walk(uiRoot,node=>node.attrs?.['aria-label']==='Library');
+  library.handlers.click();
+  const playlists=Array.from({length:68},(_,i)=>({
+    type:'playlist',id:'playlist'+i,title:'My Playlist '+i,
+    subtitle:'12 tracks',imageUrl:''
+  }));
+  assert.doesNotThrow(()=>listeners.message({data:{
+    type:'state',demo:false,track:null,playing:false,progressMs:0,
+    lyricsStatus:'missing',lyrics:[],items:playlists,
+    browseType:'library-playlists',browseLoading:false,browseError:'',
+    pinned:[],queue:[],canStream:false
+  }}));
+  const collect=(node,predicate)=>[
+    ...(predicate(node)?[node]:[]),
+    ...(node.children||[]).flatMap(child=>collect(child,predicate))
+  ];
+  assert.equal(collect(uiRoot,node=>node.className==='item-row').length,68);
+  assert.equal(collect(uiRoot,node=>node.className==='pin-playlist').length,68);
+  const firstRow=collect(uiRoot,node=>node.className==='item-row')[0];
+  assert.ok(firstRow.children[0].handlers.click,'playlist must be clickable');
 });
