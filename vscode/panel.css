@@ -580,3 +580,7 @@ body{font-size:20px;}
   .item-row,.search-input,.search-filter,.playlist-play,.playlist-more,.nav-item,.section-tab,.transport,.playlist-menu-action,.setting-control{transition:none!important}
   .playlist-menu-floating{animation:none!important}
 }
+
+/* Lucide outline icons: consistent stroke and crisp scaling across the UI. */
+.pixel-icon{fill:none!important;stroke:currentColor!important;stroke-width:2!important;stroke-linecap:round;stroke-linejoin:round;shape-rendering:geometricPrecision;image-rendering:auto}
+.transport .pixel-icon{stroke-width:2.2!important}
