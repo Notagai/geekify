@@ -483,7 +483,40 @@ function coverImage(url,cls,alt){
   return wrap;
 }
 let playlistSearchQuery='';
-let openPlaylistMenu=null;
+let openPlaylistMenuId=null;
+let confirmingUnpinId=null;
+let floatingPlaylistMenu=null;
+function dismissPlaylistMenu(){
+  floatingPlaylistMenu?.remove();floatingPlaylistMenu=null;
+  openPlaylistMenuId=null;confirmingUnpinId=null;
+}
+function showPlaylistMenu(item,anchor){
+  floatingPlaylistMenu?.remove();
+  const pinned=(state.pinned||[]).some(x=>x.id===item.id);
+  const menu=textNode('div','playlist-menu playlist-menu-floating','');
+  menu.setAttribute('role','menu');
+  menu.setAttribute('aria-label','Options for '+(item.title||'playlist'));
+  const action=button('playlist-menu-action',menu,
+    pinned?(confirmingUnpinId===item.id?'Confirm unpin':'Unpin'):'Pin',()=>{
+      if(pinned&&confirmingUnpinId!==item.id){
+        confirmingUnpinId=item.id;
+        action.textContent='Confirm unpin';
+        action.setAttribute('aria-label','Confirm unpin playlist');
+        return;
+      }
+      dismissPlaylistMenu();
+      send('togglePin',{id:item.id});
+    });
+  action.setAttribute('role','menuitem');
+  action.setAttribute('aria-label',pinned?'Unpin playlist':'Pin playlist');
+  const rect=anchor.getBoundingClientRect();
+  const left=Math.max(8,Math.min(rect.right-164,window.innerWidth-172));
+  const below=rect.bottom+6;
+  const top=below+56>window.innerHeight?Math.max(8,rect.top-62):below;
+  menu.style.left=left+'px';menu.style.top=top+'px';
+  document.body.append(menu);
+  floatingPlaylistMenu=menu;
+}
 let renderedListView='';
 function renderList(items){
   const view=[activeTab,state.browseType,state.playlistId||''].join('|');
@@ -494,7 +527,8 @@ function renderList(items){
   const previousList=paper.querySelector?.('.list');
   const previousListScroll=sameView&&previousList?previousList.scrollTop:0;
   renderedListView=view;
-  openPlaylistMenu=null;
+  if(!sameView)dismissPlaylistMenu();
+  floatingPlaylistMenu?.remove();floatingPlaylistMenu=null;
   paper.replaceChildren();
   const libraryOpen=activeTab==='library'&&state.browseType!=='library';
   if(libraryOpen){
@@ -596,32 +630,17 @@ function renderList(items){
       const arrow=textNode('span','folder-chevron','');arrow.append(icon('chevron'));itemButton.append(arrow);
     }
     if(item.type==='playlist'&&activeTab==='library'){
-      const pinned=(state.pinned||[]).some(x=>x.id===item.id);
       const actions=textNode('div','playlist-actions','');
       row.append(actions);
       const menuButton=button('playlist-more',actions,'⋯',()=>{
-        if(openPlaylistMenu&&openPlaylistMenu!==actions){
-          openPlaylistMenu.querySelector('.playlist-menu')?.remove();
-        }
-        const existing=actions.querySelector('.playlist-menu');
-        if(existing){existing.remove();openPlaylistMenu=null;return;}
-        openPlaylistMenu=actions;
-        const menu=textNode('div','playlist-menu','');
-        actions.append(menu);
-        const action=button('playlist-menu-action',menu,pinned?'Unpin':'Pin',()=>{
-          if(pinned&&!action.dataset.confirming){
-            action.dataset.confirming='true';
-            action.textContent='Confirm unpin';
-            action.setAttribute('aria-label','Confirm unpin playlist');
-            return;
-          }
-          openPlaylistMenu=null;
-          send('togglePin',{id:item.id});
-        });
-        action.setAttribute('aria-label',pinned?'Unpin playlist':'Pin playlist');
+        if(openPlaylistMenuId===item.id){dismissPlaylistMenu();return;}
+        openPlaylistMenuId=item.id;confirmingUnpinId=null;
+        showPlaylistMenu(item,menuButton);
       });
       menuButton.setAttribute('aria-label','Playlist options for '+(item.title||'playlist'));
-      menuButton.setAttribute('aria-haspopup','true');
+      menuButton.setAttribute('aria-haspopup','menu');
+      menuButton.setAttribute('aria-expanded',String(openPlaylistMenuId===item.id));
+      if(openPlaylistMenuId===item.id)showPlaylistMenu(item,menuButton);
     }
     if(item.type==='track'&&activeTab!=='management'){
       const add=button('queue-add',row,'+ Queue',(event)=>{
@@ -722,6 +741,15 @@ function renderSettings(){
   button('setting-control',controls,'Choose a device',()=>{activeTab='devices';send('devices');redraw();});
   paper.append(controls);
 }
+document.addEventListener('pointerdown',event=>{
+  if(!openPlaylistMenuId)return;
+  if(floatingPlaylistMenu?.contains(event.target))return;
+  if(event.target?.closest?.('.playlist-more'))return;
+  dismissPlaylistMenu();
+});
+document.addEventListener('keydown',event=>{
+  if(event.key==='Escape'&&openPlaylistMenuId)dismissPlaylistMenu();
+});
 function redraw(){
   navButtons.forEach(({id,button})=>{
     const selected=id===activeTab;
