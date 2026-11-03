@@ -627,6 +627,19 @@ function redraw(){
   tag.textContent=state.demo?'DEMO':'LIVE';
   transportButtons.pause.replaceChildren(icon(state.playing?'pause':'play'));
   transportButtons.pause.setAttribute('aria-label',state.playing?'Pause':'Play');
+  const shuffleOn=Boolean(state.shuffle);
+  transportButtons.shuffle.classList.toggle('mode-active',shuffleOn);
+  transportButtons.shuffle.setAttribute('aria-pressed',String(shuffleOn));
+  transportButtons.shuffle.setAttribute('aria-label',shuffleOn?'Shuffle on':'Shuffle off');
+  const repeatMode=['off','context','track'].includes(state.repeat)?state.repeat:'off';
+  transportButtons.repeat.classList.toggle('mode-active',repeatMode!=='off');
+  transportButtons.repeat.setAttribute('aria-pressed',String(repeatMode!=='off'));
+  transportButtons.repeat.setAttribute('aria-label',repeatMode==='track'?'Repeat one':repeatMode==='context'?'Repeat all':'Repeat off');
+  transportButtons.repeat.dataset.mode=repeatMode;
+  transportButtons.repeat.replaceChildren(icon('repeat'));
+  if(repeatMode==='track'){
+    const one=document.createElement('span');one.className='repeat-one-label';one.textContent='1';transportButtons.repeat.append(one);
+  }
   if(activeTab==='now'){
     if(activeSub==='lyrics')renderLyrics();
   }else if(activeTab==='settings')renderSettings();
@@ -703,5 +716,17 @@ window.addEventListener('message',event=>{
     if(priorDemo&&!message.demo&&window.Spotify)initSdk();
   }
 });
+// Checkpoints: refresh on focus, visibility return, and periodic active listening.
+let lastSyncRequest=0;
+function requestSync(){
+  if(state.demo||document.hidden)return;
+  const now=performance.now();
+  if(now-lastSyncRequest<1800)return;
+  lastSyncRequest=now;
+  send('refresh');
+}
+window.addEventListener('focus',requestSync);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)requestSync();});
+setInterval(requestSync,4500);
 setInterval(renderProgress,350);
 vscode.postMessage({type:'ready'});

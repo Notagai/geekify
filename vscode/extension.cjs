@@ -80,6 +80,7 @@ async function openPanel(context,forceDemo=false){
   let track=demo?DEMO:null,playing=demo,progressMs=demo?75000:0;
   let lyrics=demo?DEMO_LYRICS:[],lyricsStatus=demo?'synced':'missing';
   let playback=null,repeat='off',shuffle=false,deviceName='',deviceRestricted=false;
+  let controlBusy=false,lastControlAt=0;
   let queue=[],items=[],browseType='',playlist=null,notice='',planned=[];
   const settingsPath=join(homedir(),'.geekify','settings.json');
   function readSettings(){
@@ -311,7 +312,39 @@ async function openPanel(context,forceDemo=false){
       const item=items.find(x=>x.type==='track'&&x.uri===message.uri);
       if(!item)throw new Error('Track not found in the current list.');
       await api.playUri(item.uri,device());
-    }else if(name==='toggle')await api.playPause(playing,device());
+    }else if(name==='toggle'){
+      if(controlBusy)return;
+      controlBusy=true;
+      try{
+        const before=await api.playback();
+        if(!before?.device)throw new Error('No active Spotify device.');
+        playback=before;playing=Boolean(before.is_playing);
+        const target=!playing;
+        const targetDevice=before.device.id;
+        let confirmed=false,lastError=null;
+        // Re-issue the same desired state, never an inverse toggle. A rejected
+        // command must not leave the UI believing it succeeded.
+        for(let attempt=0;attempt<2;attempt++){
+          try{await api.playPause(!target,targetDevice);lastError=null;}
+          catch(error){
+            lastError=error;
+            if(error?.status===429||error?.status===401||error?.status===403&&
+              !/restriction violated/i.test(String(error.message)))break;
+          }
+          await new Promise(resolve=>setTimeout(resolve,attempt===0?450:650));
+          const observed=await api.playback();
+          if(observed){
+            playback=observed;
+            playing=Boolean(observed.is_playing);
+            if(observed.device?.id!==targetDevice)break;
+            if(playing===target){confirmed=true;break;}
+          }
+        }
+        await poll();
+        if(!confirmed)throw lastError||new Error('Spotify did not confirm '+(target?'Play':'Pause')+'. Playback state refreshed.');
+        notice='';
+      }finally{controlBusy=false;}
+    }
     else if(name==='next')await api.next(device());
     else if(name==='previous')await api.previous(device());
     else if(name==='seek'){

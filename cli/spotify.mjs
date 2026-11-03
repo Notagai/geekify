@@ -62,7 +62,16 @@ export class SpotifyApi {
   async recent(){return this.request('/me/player/recently-played',{query:{limit:30}});}
   async saved(offset=0){return this.request('/me/tracks',{query:{limit:25,offset}});}
   async playlists(offset=0){return this.request('/me/playlists',{query:{limit:25,offset}});}
-  async playlistItems(id,offset=0){return this.request('/playlists/'+encodeURIComponent(id)+'/items',{query:{limit:25,offset}});}
+  async playlistItems(id,offset=0){
+    const path='/playlists/'+encodeURIComponent(id);
+    try{return await this.request(path+'/items',{query:{limit:50,offset}});}
+    catch(error){
+      // Spotify has used both /items and /tracks for playlist entries.
+      // Fall back only when the endpoint itself is missing, not on auth errors.
+      if(error.status!==404&&error.status!==405)return Promise.reject(error);
+      return this.request(path+'/tracks',{query:{limit:50,offset}});
+    }
+  }
   async devices(){return this.request('/me/player/devices');}
   async playPause(playing,deviceId){return this.request('/me/player/'+(playing?'pause':'play'),{method:'PUT',query:deviceId?{device_id:deviceId}:undefined});}
   async next(deviceId){return this.request('/me/player/next',{method:'POST',query:deviceId?{device_id:deviceId}:undefined});}

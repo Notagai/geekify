@@ -23,10 +23,11 @@ test('unsynced lyrics remain scrollable with all text',()=>{
   assert.match(ui,/paper\.classList\.add\('unsynced-lyrics'\)/);
 });
 
-test('playback refresh is faster and restrictions expire',()=>{
+test('playback refresh is faster and does not impose a cooldown',()=>{
   const ext=read('vscode/extension.cjs');
   assert.match(ext,/let nextDelay=2500;/);
-  assert.match(ext,/blockedUntil=Date\.now\(\)\+15000;/);
+  assert.doesNotMatch(ext,/blockedUntil/);
+  assert.match(ext,/deviceRestricted=Boolean\(state\?\.device\?\.is_restricted\)/);
   assert.match(ext,/if\(polling\)pollAgain=true/);
   assert.match(ext,/lyrics=\[\];lyricsStatus='missing';/);
 });
