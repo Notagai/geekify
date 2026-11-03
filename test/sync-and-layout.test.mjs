@@ -31,3 +31,8 @@ test('playback refresh is faster and does not impose a cooldown',()=>{
   assert.match(ext,/if\(polling\)pollAgain=true/);
   assert.match(ext,/lyrics=\[\];lyricsStatus='missing';/);
 });
+
+test('returning to Current invalidates lyrics DOM cache after tab replacement',()=>{
+  const js=readFileSync(resolve(root,'vscode/panel.js'),'utf8');
+  assert.match(js,/if\(id==='now'&&previousTab!=='now'\)\s*\{\s*lyricTrackKey='';lyricActiveIndex=-1;lyricNodes=\[\];/);
+});
