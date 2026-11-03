@@ -482,7 +482,17 @@ function coverImage(url,cls,alt){
   wrap.append(img);
   return wrap;
 }
+let playlistSearchQuery='';
+let renderedListView='';
 function renderList(items){
+  const view=[activeTab,state.browseType,state.playlistId||''].join('|');
+  const sameView=view===renderedListView;
+  // Playback updates arrive every few seconds. Rebuilding the paper without
+  // restoring both scroll containers made playlists jump to the top.
+  const previousPaperScroll=sameView?paper.scrollTop:0;
+  const previousList=paper.querySelector?.('.list');
+  const previousListScroll=sameView&&previousList?previousList.scrollTop:0;
+  renderedListView=view;
   paper.replaceChildren();
   const libraryOpen=activeTab==='library'&&state.browseType!=='library';
   if(libraryOpen){
@@ -540,8 +550,34 @@ function renderList(items){
     if(state.browseError||(!count&&!state.browseLoading))
       button('setting-control',list,'Retry loading playlists',()=>send('libraryFolder',{id:'playlists'}));
   }
+  const playlistListing=activeTab==='library'&&state.browseType==='library-playlists';
+  if(playlistListing){
+    const search=document.createElement('input');
+    search.type='search';search.className='search-input playlist-search';
+    search.placeholder='Search your playlists';
+    search.setAttribute('aria-label','Search your playlists');
+    search.value=playlistSearchQuery;
+    const applyFilter=()=>{
+      playlistSearchQuery=search.value;
+      const query=playlistSearchQuery.trim().toLocaleLowerCase();
+      let matches=0;
+      for(const row of list.querySelectorAll('.item-row')){
+        const match=!query||(row.dataset.searchText||'').includes(query);
+        row.hidden=!match;
+        if(match)matches++;
+      }
+      const empty=list.querySelector('.playlist-filter-empty');
+      if(empty)empty.hidden=matches>0||!query;
+    };
+    search.addEventListener('input',applyFilter);
+    paper.insertBefore(search,list);
+  }
   (items||[]).forEach(item=>{
     const row=textNode('div','item-row','');
+    if(playlistListing){
+      row.dataset.searchText=[item.title,item.subtitle].filter(Boolean).join(' ').toLocaleLowerCase();
+      row.hidden=Boolean(playlistSearchQuery.trim())&&!row.dataset.searchText.includes(playlistSearchQuery.trim().toLocaleLowerCase());
+    }
     const itemButton=textNode('button','item','');
     itemButton.type='button';row.append(itemButton);
     if(item.type==='folder'){
@@ -579,6 +615,15 @@ function renderList(items){
     else itemButton.addEventListener('click',()=>send('openResult',{uri:item.uri}));
     list.append(row);
   });
+  if(playlistListing){
+    const empty=textNode('p','note playlist-filter-empty','No matching playlists');
+    empty.hidden=!playlistSearchQuery.trim()||items.some(item=>[item.title,item.subtitle].filter(Boolean).join(' ').toLocaleLowerCase().includes(playlistSearchQuery.trim().toLocaleLowerCase()));
+    list.append(empty);
+  }
+  if(sameView){
+    paper.scrollTop=previousPaperScroll;
+    list.scrollTop=previousListScroll;
+  }
   if(activeTab==='library'&&state.browseType==='playlist'&&state.browseError){
     list.append(textNode('p','note','Could not load all playlist tracks: '+state.browseError));
     button('setting-control',list,'Retry playlist tracks',()=>send('retryPlaylist'));
