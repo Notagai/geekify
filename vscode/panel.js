@@ -668,14 +668,14 @@ function renderList(items){
     list.scrollTop=previousListScroll;
   }
   if(activeTab==='library'&&state.browseType==='playlist'&&state.browseError){
-    list.append(textNode('p','note','Could not load all playlist tracks: '+state.browseError));
+    list.append(textNode('p','note','Playlist details: '+state.browseError));
     button('setting-control',list,'Retry playlist tracks',()=>send('retryPlaylist'));
   }
   if(!items?.length&&!(activeTab==='library'&&state.browseType==='library-playlists')){
     const playlistEmpty=activeTab==='library'&&state.browseType==='playlist';
     const received=Number(state.playlistRowsReceived)||0;
     list.append(textNode('p','secondary',playlistEmpty
-      ?state.browseError?'Spotify could not load this playlist. See the error above.'
+      ?state.browseError?'No playable tracks were recognized. See playlist details above.'
         :received?'Spotify returned '+received+' playlist entries, but none had playable track details.'
           :'Spotify returned zero playlist entries for this account or playlist.'
       :activeTab==='devices'?'No devices returned by Spotify.':'No tracks here yet.'));
