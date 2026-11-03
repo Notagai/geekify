@@ -7,7 +7,7 @@ test('403 errors retain the reason and action-specific diagnosis',()=>{
   assert.match(premium,/PREMIUM_REQUIRED/);
   assert.match(premium,/Premium/);
   const restricted=describeSpotifyFailure(403,'RESTRICTION_VIOLATED','Player command failed','PUT','/me/player/pause');
-  assert.match(restricted,/Spotify Desktop/);
+  assert.match(restricted,/blocks remote control/);
   assert.match(restricted,/\/me\/player\/pause/);
 });
 test('unknown 403 requests inspection rather than presuming user lacks Premium',()=>{
