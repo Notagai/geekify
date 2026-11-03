@@ -542,20 +542,20 @@ function renderList(items){
   }
   (items||[]).forEach(item=>{
     const row=textNode('div','item-row','');
-    const button=textNode('button','item','');
-    button.type='button';row.append(button);
+    const itemButton=textNode('button','item','');
+    itemButton.type='button';row.append(itemButton);
     if(item.type==='folder'){
-      const folder=textNode('span','folder-icon','');folder.append(icon('folder'));button.append(folder);
-      button.className+=' folder-item';
+      const folder=textNode('span','folder-icon','');folder.append(icon('folder'));itemButton.append(folder);
+      itemButton.className+=' folder-item';
     }else if(['playlist','track','album','artist','show','episode'].includes(item.type)){
-      button.append(coverImage(item.imageUrl,'playlist-row-cover',item.type==='playlist'?'Playlist cover':'Album cover'));
+      itemButton.append(coverImage(item.imageUrl,'playlist-row-cover',item.type==='playlist'?'Playlist cover':'Album cover'));
     }
     const labels=textNode('span','item-labels','');
     labels.append(textNode('span','item-title',truncate(item.title,70)));
     labels.append(textNode('small','item-subtitle',truncate(item.subtitle,60)));
-    button.append(labels);
+    itemButton.append(labels);
     if(item.type==='folder'){
-      const arrow=textNode('span','folder-chevron','');arrow.append(icon('chevron'));button.append(arrow);
+      const arrow=textNode('span','folder-chevron','');arrow.append(icon('chevron'));itemButton.append(arrow);
     }
     if(item.type==='playlist'&&activeTab==='library'){
       const pin=button('pin-playlist',row,(state.pinned||[]).some(x=>x.id===item.id)?'Unpin':'Pin',event=>{
@@ -569,14 +569,14 @@ function renderList(items){
       });
       add.title='Add to Geekify play-next plan';
     }
-    if(item.type==='folder')button.addEventListener('click',()=>send('libraryFolder',{id:item.id}));
-    else if(item.type==='playlist')button.addEventListener('click',()=>{
+    if(item.type==='folder')itemButton.addEventListener('click',()=>send('libraryFolder',{id:item.id}));
+    else if(item.type==='playlist')itemButton.addEventListener('click',()=>{
       if(activeTab==='search')send('openResult',{uri:item.uri});
       else send('playlist',{id:item.id});
     });
-    else if(item.type==='device')button.addEventListener('click',()=>send('transfer',{deviceId:item.id}));
-    else if(item.type==='track')button.addEventListener('click',()=>send('playItem',{uri:item.uri}));
-    else button.addEventListener('click',()=>send('openResult',{uri:item.uri}));
+    else if(item.type==='device')itemButton.addEventListener('click',()=>send('transfer',{deviceId:item.id}));
+    else if(item.type==='track')itemButton.addEventListener('click',()=>send('playItem',{uri:item.uri}));
+    else itemButton.addEventListener('click',()=>send('openResult',{uri:item.uri}));
     list.append(row);
   });
   if(activeTab==='library'&&state.browseType==='playlist'&&state.browseError){
