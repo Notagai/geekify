@@ -80,6 +80,7 @@ async function openPanel(context,forceDemo=false){
   let track=demo?DEMO:null,playing=demo,progressMs=demo?75000:0;
   let lyrics=demo?DEMO_LYRICS:[],lyricsStatus=demo?'synced':'missing';
   let playback=null,repeat='off',shuffle=false,deviceName='',deviceRestricted=false;
+  let blockedDeviceId='';
   let queue=[],items=[],browseType='',playlist=null,notice='',planned=[];
   const settingsPath=join(homedir(),'.geekify','settings.json');
   function readSettings(){
@@ -138,7 +139,7 @@ async function openPanel(context,forceDemo=false){
       if(closed||demo)return;
       playback=state;playing=Boolean(state?.is_playing);
       deviceName=String(state?.device?.name||'No active device').slice(0,80);
-      deviceRestricted=Boolean(state?.device?.is_restricted);
+      deviceRestricted=Boolean(state?.device?.is_restricted)||Boolean(blockedDeviceId&&blockedDeviceId===state?.device?.id);
       progressMs=state?.progress_ms||0;repeat=state?.repeat_state||'off';
       shuffle=Boolean(state?.shuffle_state);
       track=spotify.trackInfo(state?.item);
@@ -281,14 +282,14 @@ async function openPanel(context,forceDemo=false){
       const found=items.find(x=>x.uri===message.uri&&x.type!=='track');
       if(!found)return;
       if(['playlist','album'].includes(found.type)){
-        if(playback?.device?.is_restricted)throw new Error('Selected device blocks playback commands.');
+        if(deviceRestricted)throw new Error('This device blocks remote playback. Keep your phone EQ and control playback on the phone, or switch to an unrestricted device.');
         await api.playUri(found.uri,device());
       }else if(['artist','show','episode'].includes(found.type)&&/^[A-Za-z0-9]+$/.test(found.id||'')){
         await vscode.env.openExternal(vscode.Uri.parse('https://open.spotify.com/'+found.type+'/'+found.id));
       }
       return;
     }
-    if(['toggle','next','previous','seek','shuffle','repeat','playItem'].includes(name)&&playback?.device?.is_restricted)
+    if(['toggle','next','previous','seek','shuffle','repeat','playItem'].includes(name)&&deviceRestricted)
       throw new Error('Device '+deviceName+' blocks remote controls. Switch devices or control playback in Spotify.');
     if(name==='transfer'){
       if(typeof message.deviceId!=='string'||!(/^[a-zA-Z0-9]+$/.test(message.deviceId)))throw new Error('Invalid device.');
@@ -323,7 +324,14 @@ async function openPanel(context,forceDemo=false){
     }
     if(message.type==='action'){
       try{await act(message);}
-      catch(error){notice=safeError(error);emit();}
+      catch(error){
+        if(error?.status===403&&/restriction violated/i.test(String(error.message))){
+          blockedDeviceId=device()||'';
+          deviceRestricted=true;
+          notice='Spotify blocked remote control of '+deviceName+'. You can keep listening with your phone EQ, but playback must be controlled on the phone.';
+        }else notice=safeError(error);
+        emit();
+      }
     }
   });
   panel.onDidDispose(()=>{
