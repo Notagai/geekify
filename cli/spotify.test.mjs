@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { describeSpotifyFailure, trackInfo, playlistTrackItems } from './spotify.mjs';
+import { describeSpotifyFailure, SpotifyApi, trackInfo, playlistTrackItems } from './spotify.mjs';
 
 test('403 errors retain the reason and action-specific diagnosis',()=>{
   const premium=describeSpotifyFailure(403,'PREMIUM_REQUIRED','Player command failed: Premium required','PUT','/me/player/play');
@@ -29,4 +29,28 @@ test('playlist track parsing rejects unavailable and malformed rows',()=>{
   assert.equal(trackInfo({name:'Missing URI',type:'track'}),null);
   assert.equal(trackInfo({type:'episode',name:'Podcast',uri:'spotify:episode:x'}),null);
   assert.equal(trackInfo({type:'track',name:'Local',uri:'spotify:track:abc',is_local:true}),null);
+});
+
+test('playlist library loads every page instead of silently cutting off after 25',async()=>{
+  const api=new SpotifyApi();
+  const seen=[];
+  api.playlists=async offset=>{
+    seen.push(offset);
+    return offset===0
+      ?{offset:0,next:'next',items:Array.from({length:50},(_,i)=>({id:'playlist'+i,name:'Playlist '+i}))}
+      :{offset:50,next:null,items:[{id:'playlist50',name:'Playlist 50'}]};
+  };
+  const playlists=await api.allPlaylists();
+  assert.equal(playlists.length,51);
+  assert.deepEqual(seen,[0,50]);
+});
+test('playlist API errors are surfaced instead of replaced with empty results',async()=>{
+  const api=new SpotifyApi();
+  api.playlists=async()=>{throw new Error('Spotify GET /me/playlists returned 403');};
+  await assert.rejects(api.allPlaylists(),/403/);
+});
+test('playlist API invalid responses are not mistaken for empty libraries',async()=>{
+  const api=new SpotifyApi();
+  api.playlists=async()=>({unexpected:'shape'});
+  await assert.rejects(api.allPlaylists(),/invalid playlists response/);
 });

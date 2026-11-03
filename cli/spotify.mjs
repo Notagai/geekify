@@ -61,7 +61,24 @@ export class SpotifyApi {
   async search(q,offset=0){return this.request('/search',{query:{q,type:'track,album,artist,playlist,show,episode',limit:10,offset}});}
   async recent(){return this.request('/me/player/recently-played',{query:{limit:30}});}
   async saved(offset=0){return this.request('/me/tracks',{query:{limit:25,offset}});}
-  async playlists(offset=0){return this.request('/me/playlists',{query:{limit:25,offset}});}
+  async playlists(offset=0){return this.request('/me/playlists',{query:{limit:50,offset}});}
+  async allPlaylists(maxPages=10){
+    // Spotify paginates this endpoint. A single request silently hides most
+    // libraries; cap traversal so a broken paging response cannot loop forever.
+    const all=[];
+    let offset=0;
+    for(let page=0;page<maxPages;page++){
+      const response=await this.playlists(offset);
+      if(!response||!Array.isArray(response.items)){
+        throw new Error('Spotify returned an invalid playlists response.');
+      }
+      all.push(...response.items.filter(item=>item&&typeof item.id==='string'));
+      const nextOffset=Number(response.offset??offset)+response.items.length;
+      if(!response.next||response.items.length===0||nextOffset<=offset)break;
+      offset=nextOffset;
+    }
+    return all;
+  }
   async playlistItems(id,offset=0){
     const path='/playlists/'+encodeURIComponent(id);
     try{return await this.request(path+'/items',{query:{limit:50,offset}});}
