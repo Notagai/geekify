@@ -489,3 +489,9 @@ body{font-size:20px;}
 @media(max-width:690px){.player-panel.cover-expanded{grid-template-columns:135px minmax(0,1fr);grid-template-areas:"album song" "controls controls";}
  .player-panel.cover-expanded .album-art-frame{transform:scale(1.65);}}
 @media(prefers-reduced-motion:reduce){.lyric-row{transition:none;}}
+
+/* Separate item actions from the clickable content: no nested buttons. */
+.item-row{display:flex;align-items:center;min-width:0;width:100%;border-bottom:1px solid #a77e583a;gap:6px;}
+.item-row .item{flex:1;min-width:0;border:0;}
+.item-row .pin-playlist,.item-row .queue-add{margin-right:8px;align-self:center;}
+@media(max-width:690px){.item-row .pin-playlist,.item-row .queue-add{padding-inline:5px;}}
