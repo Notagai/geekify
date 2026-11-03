@@ -94,3 +94,20 @@ test('Spotify playlist images are forwarded and rendered with safe album-art fal
   assert.ok(css.includes('.playlist-row-cover'));
   assert.ok(html.includes('https://*.spotifycdn.com'));
 });
+
+test('Library owns the hierarchy and pixel font is permitted by CSP',()=>{
+ const ext=readFileSync(resolve(root,'vscode/extension.cjs'),'utf8');
+ const ui=readFileSync(resolve(root,'vscode/panel.js'),'utf8');
+ const css=readFileSync(resolve(root,'vscode/panel.css'),'utf8');
+ const html=readFileSync(resolve(root,'vscode/panel.html'),'utf8');
+ assert.ok(!ui.includes("['playlists','Playlists']"));
+ assert.ok(ext.includes("type:'folder',id:'liked'"));
+ assert.ok(ext.includes("type:'folder',id:'playlists'"));
+ assert.ok(ui.includes("send('libraryFolder',{id:item.id})"));
+ assert.ok(ui.includes("send('libraryBack')"));
+ assert.ok(css.includes('.folder-item'));
+ assert.ok(css.includes('.library-breadcrumbs'));
+ assert.ok(css.includes("font-family:'Pixelify Sans'"));
+ assert.ok(html.includes('fonts.gstatic.com'));
+ assert.ok(css.includes('max-width:150px'));
+});
