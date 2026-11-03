@@ -102,7 +102,13 @@ test('responsive player bootstraps and renders state with a mocked VS Code DOM',
     ...(node.children||[]).flatMap(child=>collect(child,predicate))
   ];
   assert.equal(collect(uiRoot,node=>node.className==='item-row').length,68);
-  assert.equal(collect(uiRoot,node=>node.className==='pin-playlist').length,68);
+  assert.equal(collect(uiRoot,node=>node.className==='playlist-more').length,68);
+  const menuButton=collect(uiRoot,node=>node.className==='playlist-more')[0];
+  menuButton.handlers.click();
+  const menuAction=collect(uiRoot,node=>node.className==='playlist-menu-action')[0];
+  assert.equal(menuAction.textContent,'Pin');
+  menuAction.handlers.click();
+  assert.ok(calls.some(call=>call.name==='togglePin'&&call.id==='playlist0'));
   const firstRow=collect(uiRoot,node=>node.className==='item-row')[0];
   assert.ok(firstRow.children[0].handlers.click,'playlist must be clickable');
   const paper=walk(uiRoot,node=>node.className==='paper-content');
