@@ -119,7 +119,7 @@ test('device status, search shortcuts and expandable art implemented',()=>{
  assert.ok(ext.includes('deviceName,deviceRestricted,deviceId:'));
  assert.ok(ext.includes("type==='recent'"));
  assert.ok(ext.includes("type==='daily'"));
- assert.ok(ui.includes("send('daily')"));
+ assert.ok(ui.includes("send(lastSearch?'search':'daily'"));
  assert.ok(ui.includes("send('recent')"));
  assert.ok(ui.includes("Expand playing song cover"));
  assert.ok(css.includes('.album-art-frame.expanded{transform:scale(2)'));
@@ -132,7 +132,7 @@ test('management, VT323 and stable lyric size are wired',()=>{
  const html=readFileSync(resolve(root,'vscode/panel.html'),'utf8');
  const api=readFileSync(resolve(root,'cli/spotify.mjs'),'utf8');
  assert.ok(ui.includes("['management','Management']"));
- assert.ok(ui.includes("vscode.setState?.("));
+ assert.ok(ext.includes("writeFileSync(settingsPath,"));
  assert.ok(ui.includes("renderManagement()"));
  assert.ok(ui.includes("renderSettings()"));
  assert.ok(ext.includes("planned.push("));
@@ -156,4 +156,23 @@ test('six full-width section tabs are ordered correctly without a second tab bar
  assert.ok(js.includes("sheet.setAttribute('role','tabpanel')"));
  assert.ok(css.includes('.workspace{display:flex!important;flex-direction:column'));
  assert.ok(css.includes('.parchment{flex:1 1 auto;'));
+});
+
+test('settings file, default lyric size, pinned playlists and scrolling renderer are wired',()=>{
+ const ui=readFileSync(resolve(root,'vscode/panel.js'),'utf8');
+ const extension=readFileSync(resolve(root,'vscode/extension.cjs'),'utf8');
+ const css=readFileSync(resolve(root,'vscode/panel.css'),'utf8');
+ assert.ok(extension.includes("'settings.json'"));
+ assert.ok(extension.includes('lyricSize:28,pinned:[]'));
+ assert.ok(extension.includes("name==='togglePin'"));
+ assert.ok(extension.includes("name==='lyricsSize'"));
+ assert.ok(extension.includes('...localSettings.pinned.map('));
+ assert.ok(ui.includes("current?.scrollIntoView?.("));
+ assert.ok(ui.includes("block:'center'"));
+ assert.ok(ui.includes("const row=textNode('div','item-row','')"));
+ assert.ok(ui.includes("button('pin-playlist',row,"));
+ assert.ok(ui.includes("button('queue-add',row,"));
+ assert.ok(ui.includes("send(lastSearch?'search':'daily'"));
+ assert.ok(ui.includes("player.classList.toggle('cover-expanded'"));
+ assert.ok(css.includes('.player-panel.cover-expanded'));
 });

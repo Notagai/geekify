@@ -17,7 +17,7 @@ const DEMO_LYRICS=[
   {timeMs:112000,text:'the city keeps glowing'}
 ];
 const allowedActions=new Set(['toggle','next','previous','seek','save','shuffle','repeat',
-  'playItem','openResult','planTrack','movePlanned','removePlanned','submitPlan','management','transfer','search','daily','recent','library','libraryFolder','libraryBack','playlist','devices','queue','openWeb','refresh']);
+  'playItem','openResult','togglePin','lyricsSize','planTrack','movePlanned','removePlanned','submitPlan','management','transfer','search','daily','recent','library','libraryFolder','libraryBack','playlist','devices','queue','openWeb','refresh']);
 const safeError=e=>String(e?.message||e).replace(/[\x00-\x1f\x7f-\x9f]/g,' ').slice(0,175);
 
 let activePanel;
@@ -80,12 +80,25 @@ async function openPanel(context,forceDemo=false){
   let track=demo?DEMO:null,playing=demo,progressMs=demo?75000:0;
   let lyrics=demo?DEMO_LYRICS:[],lyricsStatus=demo?'synced':'missing';
   let playback=null,repeat='off',shuffle=false,deviceName='',deviceRestricted=false;
+  let blockedDeviceId='';
   let queue=[],items=[],browseType='',playlist=null,notice='',planned=[];
+  const settingsPath=join(homedir(),'.geekify','settings.json');
+  function readSettings(){
+    try{const data=JSON.parse(readFileSync(settingsPath,'utf8'));
+      return {lyricSize:Number.isInteger(data.lyricSize)?Math.max(18,Math.min(46,data.lyricSize)):28,
+        pinned:Array.isArray(data.pinned)?data.pinned.filter(x=>x&&/^[A-Za-z0-9]+$/.test(x.id)&&typeof x.title==='string').slice(0,40):[]};
+    }catch{return {lyricSize:28,pinned:[]};}
+  }
+  let localSettings=readSettings();
+  function saveSettings(){mkdirSync(join(homedir(),'.geekify'),{recursive:true,mode:0o700});
+    writeFileSync(settingsPath,JSON.stringify(localSettings,null,2),{encoding:'utf8',mode:0o600});
+  }
   function send(message){if(!closed)void panel.webview.postMessage(message);}
   function emit(){
     const scopes=String(auth.loadConfig().token?.scope||'').split(/\s+/);
     send({type:'state',demo,track,playing,progressMs,lyrics,lyricsStatus,
-      queue,planned,items,browseType,playlistName:playlist?.name||'',
+      queue,planned,items,browseType,lyricSize:localSettings.lyricSize,pinned:localSettings.pinned,
+      playlistName:playlist?.name||'',
       playlistImageUrl:playlist?.imageUrl||'',notice,repeat,shuffle,
       deviceName,deviceRestricted,deviceId:playback?.device?.id||'',
       canStream:!demo&&scopes.includes('streaming')});
@@ -126,7 +139,7 @@ async function openPanel(context,forceDemo=false){
       if(closed||demo)return;
       playback=state;playing=Boolean(state?.is_playing);
       deviceName=String(state?.device?.name||'No active device').slice(0,80);
-      deviceRestricted=Boolean(state?.device?.is_restricted);
+      deviceRestricted=Boolean(state?.device?.is_restricted)||Boolean(blockedDeviceId&&blockedDeviceId===state?.device?.id);
       progressMs=state?.progress_ms||0;repeat=state?.repeat_state||'off';
       shuffle=Boolean(state?.shuffle_state);
       track=spotify.trackInfo(state?.item);
@@ -147,8 +160,7 @@ async function openPanel(context,forceDemo=false){
     if(demo){notice='Log in with geekify login to browse Spotify.';emit();return;}
     let response;
     if(type==='search'||type==='daily'){
-      const q=type==='daily'?'Daily Mix':String(query||'').trim().slice(0,100);
-      if(!q){browseType='search';items=[];emit();return;}
+      const q=type==='daily'||!String(query||'').trim()?'Daily Mix':String(query||'').trim().slice(0,100);
       const result=await api.search(q);
       response=[];
       for(const [key,kind] of [['tracks','track'],['albums','album'],['artists','artist'],['playlists','playlist'],['shows','show'],['episodes','episode']]){
@@ -161,6 +173,8 @@ async function openPanel(context,forceDemo=false){
       playlist=null;
       browseType='library';
       items=[
+        ...localSettings.pinned.map(x=>({type:'playlist',id:x.id,title:x.title,name:x.title,
+          subtitle:'Pinned playlist',imageUrl:x.imageUrl||'',uri:'spotify:playlist:'+x.id})),
         {type:'folder',id:'liked',title:'Liked Songs',subtitle:'Your saved tracks'},
         {type:'folder',id:'playlists',title:'Playlists',subtitle:'Your Spotify playlists'}
       ];
@@ -197,12 +211,28 @@ async function openPanel(context,forceDemo=false){
       await vscode.env.openExternal(vscode.Uri.parse('https://open.spotify.com/'));return;
     }
     if(name==='refresh'){if(demo)emit();else await poll();return;}
+    if(name==='lyricsSize'){
+      const size=Number(message.size);
+      if(Number.isFinite(size))localSettings.lyricSize=Math.max(18,Math.min(46,Math.round(size)));
+      saveSettings();emit();return;
+    }
+    if(name==='togglePin'){
+      if(typeof message.id!=='string'||!/^[A-Za-z0-9]+$/.test(message.id))return;
+      const found=items.find(x=>x.type==='playlist'&&x.id===message.id)||localSettings.pinned.find(x=>x.id===message.id);
+      if(!found)return;
+      const existing=localSettings.pinned.findIndex(x=>x.id===message.id);
+      if(existing>=0)localSettings.pinned.splice(existing,1);
+      else if(localSettings.pinned.length<40)localSettings.pinned.push({id:found.id,title:found.title||found.name,
+        imageUrl:found.imageUrl||''});
+      saveSettings();
+      if(browseType==='library')await browse('library');else emit();return;
+    }
     if(name==='libraryFolder'){
       if(message.id==='liked'||message.id==='playlists')await browse('library-'+message.id);
       return;
     }
     if(name==='libraryBack'){
-      if(browseType==='playlist')await browse('library-playlists');
+      if(browseType==='playlist')await browse('library');
       else await browse('library');
       return;
     }
@@ -252,14 +282,14 @@ async function openPanel(context,forceDemo=false){
       const found=items.find(x=>x.uri===message.uri&&x.type!=='track');
       if(!found)return;
       if(['playlist','album'].includes(found.type)){
-        if(playback?.device?.is_restricted)throw new Error('Selected device blocks playback commands.');
+        if(deviceRestricted)throw new Error('This device blocks remote playback. Keep your phone EQ and control playback on the phone, or switch to an unrestricted device.');
         await api.playUri(found.uri,device());
       }else if(['artist','show','episode'].includes(found.type)&&/^[A-Za-z0-9]+$/.test(found.id||'')){
         await vscode.env.openExternal(vscode.Uri.parse('https://open.spotify.com/'+found.type+'/'+found.id));
       }
       return;
     }
-    if(['toggle','next','previous','seek','shuffle','repeat','playItem'].includes(name)&&playback?.device?.is_restricted)
+    if(['toggle','next','previous','seek','shuffle','repeat','playItem'].includes(name)&&deviceRestricted)
       throw new Error('Device '+deviceName+' blocks remote controls. Switch devices or control playback in Spotify.');
     if(name==='transfer'){
       if(typeof message.deviceId!=='string'||!(/^[a-zA-Z0-9]+$/.test(message.deviceId)))throw new Error('Invalid device.');
@@ -294,7 +324,14 @@ async function openPanel(context,forceDemo=false){
     }
     if(message.type==='action'){
       try{await act(message);}
-      catch(error){notice=safeError(error);emit();}
+      catch(error){
+        if(error?.status===403&&/restriction violated/i.test(String(error.message))){
+          blockedDeviceId=device()||'';
+          deviceRestricted=true;
+          notice='Spotify blocked remote control of '+deviceName+'. You can keep listening with your phone EQ, but playback must be controlled on the phone.';
+        }else notice=safeError(error);
+        emit();
+      }
     }
   });
   panel.onDidDispose(()=>{
