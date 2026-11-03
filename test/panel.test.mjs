@@ -119,7 +119,7 @@ test('device status, search shortcuts and expandable art implemented',()=>{
  assert.ok(ext.includes('deviceName,deviceRestricted,deviceId:'));
  assert.ok(ext.includes("type==='recent'"));
  assert.ok(ext.includes("type==='daily'"));
- assert.ok(ui.includes("send(lastSearch?'search':'daily'"));
+ assert.ok(ui.includes("send('search',{query:lastSearch"));
  assert.ok(ui.includes("send('recent')"));
  assert.ok(ui.includes("Expand playing song cover"));
  assert.ok(css.includes('.album-art-frame.expanded{transform:scale(2)'));
@@ -173,7 +173,7 @@ test('settings file, default lyric size, pinned playlists and scrolling renderer
  assert.ok(ui.includes("button('playlist-more',actions,"));
  assert.ok(ui.includes("showPlaylistMenu(item,menuButton)"));
  assert.ok(ui.includes("button('queue-add',row,"));
- assert.ok(ui.includes("send(lastSearch?'search':'daily'"));
+ assert.ok(ui.includes("send('search',{query:lastSearch"));
  assert.ok(ui.includes("player.classList.toggle('cover-expanded'"));
  assert.ok(css.includes('.player-panel.cover-expanded'));
 });
@@ -198,4 +198,14 @@ test('universal search supports Spotify categories, saved library and live query
  assert.ok(extension.includes('api.allPlaylists()'));
  assert.ok(extension.includes('api.saved()'));
  assert.ok(extension.includes("await browse(name,message.query,message.source)"));
+});
+
+test('decorative leaves stay noninteractive and motion respects accessibility preferences',()=>{
+ const ui=readFileSync(resolve(root,'vscode/panel.js'),'utf8');
+ const css=readFileSync(resolve(root,'vscode/panel.css'),'utf8');
+ assert.ok(ui.includes("edgeFoliage.setAttribute('aria-hidden','true')"));
+ assert.ok(ui.includes("['top-left','top-right','bottom-left','bottom-right']"));
+ assert.match(css,/\.edge-foliage\{[^}]*pointer-events:none/);
+ assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
+ assert.match(css,/\.playlist-menu-floating\{animation:leaf-menu-in/);
 });
