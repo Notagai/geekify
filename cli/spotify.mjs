@@ -96,6 +96,9 @@ export class SpotifyApi {
       return this.request(path+'/tracks',{query:{limit:50,offset}});
     }
   }
+  async legacyPlaylistItems(id,offset=0){
+    return this.request('/playlists/'+encodeURIComponent(id)+'/tracks',{query:{limit:50,offset}});
+  }
   async allPlaylistItems(id,maxPages=10){
     const all=[];
     let offset=0;
@@ -114,7 +117,24 @@ export class SpotifyApi {
       if(!response.next||!response.items.length||nextOffset<=offset)break;
       offset=nextOffset;
     }
-    return {items:all};
+    // Spotify may return a successful /items response with metadata-only
+    // entries. Try the older /tracks representation before giving up.
+    if(all.length&&!playlistTrackItems({items:all}).length){
+      const legacy=[];
+      let legacyOffset=0;
+      try{
+        for(let page=0;page<maxPages;page++){
+          const response=await this.legacyPlaylistItems(id,legacyOffset);
+          if(!response||!Array.isArray(response.items))break;
+          legacy.push(...response.items);
+          const nextOffset=Number(response.offset??legacyOffset)+Number(response.limit||50);
+          if(!response.next||!response.items.length||nextOffset<=legacyOffset)break;
+          legacyOffset=nextOffset;
+        }
+        if(playlistTrackItems({items:legacy}).length)return {items:legacy,source:'tracks'};
+      }catch{/* Keep the original successful response for diagnosis. */}
+    }
+    return {items:all,source:'items'};
   }
   async devices(){return this.request('/me/player/devices');}
   async playPause(playing,deviceId){return this.request('/me/player/'+(playing?'pause':'play'),{method:'PUT',query:deviceId?{device_id:deviceId}:undefined});}
@@ -141,12 +161,37 @@ export function playlistTrackItems(payload){
 }
 
 export function trackInfo(item){
-  const song=item?.track||item?.item||item;
+  let song=item;
+  for(let depth=0;depth<3&&song&&typeof song==='object';depth++){
+    if(song.name||(!song.track&&!song.item))break;
+    song=song.track??song.item;
+  }
   if(!song || typeof song!=='object' || song.type==='episode' || song.is_local ||
-    (song.type && song.type!=='track') || !song.name || !song.uri?.startsWith('spotify:track:'))return null;
-  return {id:song.id,uri:song.uri,title:song.name,
+    (song.type && song.type!=='track') || !song.name)return null;
+  // Spotify sometimes omits uri from projections while retaining a valid ID.
+  const uri=/^spotify:track:[A-Za-z0-9]+$/.test(song.uri||'')?song.uri:
+    /^[A-Za-z0-9]{10,}$/.test(song.id||'')?'spotify:track:'+song.id:null;
+  if(!uri)return null;
+  return {id:song.id,uri,title:song.name,
     artist:song.artists?.map(a=>a.name).join(', ')||'Unknown artist',
     primaryArtist:song.artists?.[0]?.name||'Unknown artist',
     album:song.album?.name||'',durationMs:song.duration_ms||0,
     imageUrl:song.album?.images?.[0]?.url||''};
+}
+
+// Shape-only diagnostics. Never include song names, playlist names or IDs.
+export function playlistEntryShape(payload){
+  const rows=payload?.items||[];
+  const counts={item:0,track:0,direct:0,missing:0,uri:0,id:0,name:0,episode:0,local:0};
+  for(const row of rows){
+    const kind=row?.item?'item':row?.track?'track':row?'direct':'missing';
+    counts[kind]++;
+    const value=row?.item??row?.track??row;
+    if(value?.uri)counts.uri++;
+    if(value?.id)counts.id++;
+    if(value?.name)counts.name++;
+    if(value?.type==='episode')counts.episode++;
+    if(value?.is_local)counts.local++;
+  }
+  return Object.entries(counts).filter(([,value])=>value).map(([key,value])=>key+': '+value).join(', ')||'no entries';
 }
