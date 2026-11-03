@@ -75,12 +75,12 @@ async function openPanel(context,forceDemo=false){
         vscode.Uri.joinPath(context.extensionUri,'vscode')]
     });
   const api=new spotify.SpotifyApi();
-  let closed=false,pollTimer,lyricAbort,polling=false,trackKey='';
+  let closed=false,pollTimer,lyricAbort,polling=false,trackKey='',pollAgain=false;
   let demo=forceDemo||!auth.isConnected();
   let track=demo?DEMO:null,playing=demo,progressMs=demo?75000:0;
   let lyrics=demo?DEMO_LYRICS:[],lyricsStatus=demo?'synced':'missing';
   let playback=null,repeat='off',shuffle=false,deviceName='',deviceRestricted=false;
-  let blockedDeviceId='';
+  let blockedDeviceId='',blockedUntil=0;
   let queue=[],items=[],browseType='',playlist=null,notice='',planned=[];
   const settingsPath=join(homedir(),'.geekify','settings.json');
   function readSettings(){
@@ -133,26 +133,34 @@ async function openPanel(context,forceDemo=false){
   async function poll(){
     if(closed||demo||polling)return;
     polling=true;
-    let nextDelay=5500;
+    let nextDelay=2500;
     try{
       const state=await api.playback();
       if(closed||demo)return;
       playback=state;playing=Boolean(state?.is_playing);
       deviceName=String(state?.device?.name||'No active device').slice(0,80);
-      deviceRestricted=Boolean(state?.device?.is_restricted)||Boolean(blockedDeviceId&&blockedDeviceId===state?.device?.id);
+      deviceRestricted=Boolean(state?.device?.is_restricted)||Boolean(blockedDeviceId&&blockedDeviceId===state?.device?.id&&Date.now()<blockedUntil);
+      if(state?.device?.id!==blockedDeviceId||Date.now()>=blockedUntil){blockedDeviceId='';blockedUntil=0;}
       progressMs=state?.progress_ms||0;repeat=state?.repeat_state||'off';
       shuffle=Boolean(state?.shuffle_state);
       track=spotify.trackInfo(state?.item);
       const key=track?.uri||'';
-      if(key!==trackKey){trackKey=key;void loadLyrics(track);}
-      notice='';
+      if(key!==trackKey){
+        trackKey=key;
+        lyricAbort?.abort();lyrics=[];lyricsStatus='missing';
+        if(track)void loadLyrics(track);
+      }
+      if(!blockedUntil)notice='';
       emit();
     }catch(error){
       notice=safeError(error);nextDelay=Math.max(5000,(error.retryAfter||5)*1000);
       emit();
     }finally{
       polling=false;
-      if(!closed&&!demo)pollTimer=setTimeout(poll,nextDelay);
+      if(!closed&&!demo){
+        pollTimer=setTimeout(poll,pollAgain?100:nextDelay);
+        pollAgain=false;
+      }
     }
   }
   function device(){return playback?.device?.id||undefined;}
@@ -210,7 +218,14 @@ async function openPanel(context,forceDemo=false){
     if(name==='openWeb'){
       await vscode.env.openExternal(vscode.Uri.parse('https://open.spotify.com/'));return;
     }
-    if(name==='refresh'){if(demo)emit();else await poll();return;}
+    if(name==='refresh'){
+      if(demo)emit();else{
+        clearTimeout(pollTimer);
+        if(polling)pollAgain=true;
+        else await poll();
+      }
+      return;
+    }
     if(name==='lyricsSize'){
       const size=Number(message.size);
       if(Number.isFinite(size))localSettings.lyricSize=Math.max(18,Math.min(46,Math.round(size)));
@@ -310,7 +325,9 @@ async function openPanel(context,forceDemo=false){
       const modes=['off','context','track'];
       await api.repeat(modes[(modes.indexOf(repeat)+1)%modes.length],device());
     }
-    clearTimeout(pollTimer);await poll();
+    clearTimeout(pollTimer);
+    if(polling)pollAgain=true;
+    else await poll();
   }
   panel.webview.onDidReceiveMessage(async message=>{
     if(!message||typeof message.type!=='string'||closed)return;
@@ -327,6 +344,7 @@ async function openPanel(context,forceDemo=false){
       catch(error){
         if(error?.status===403&&/restriction violated/i.test(String(error.message))){
           blockedDeviceId=device()||'';
+          blockedUntil=Date.now()+15000;
           deviceRestricted=true;
           notice='Spotify blocked remote control of '+deviceName+'. You can keep listening with your phone EQ, but playback must be controlled on the phone.';
         }else notice=safeError(error);
