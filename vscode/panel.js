@@ -703,5 +703,17 @@ window.addEventListener('message',event=>{
     if(priorDemo&&!message.demo&&window.Spotify)initSdk();
   }
 });
+// Checkpoints: refresh on focus, visibility return, and periodic active listening.
+let lastSyncRequest=0;
+function requestSync(){
+  if(state.demo||document.hidden)return;
+  const now=performance.now();
+  if(now-lastSyncRequest<1800)return;
+  lastSyncRequest=now;
+  send('refresh');
+}
+window.addEventListener('focus',requestSync);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)requestSync();});
+setInterval(requestSync,4500);
 setInterval(renderProgress,350);
 vscode.postMessage({type:'ready'});
