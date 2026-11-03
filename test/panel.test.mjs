@@ -69,14 +69,11 @@ test('wood-and-ivy branding and all navigation icons use complete pixel sprites'
   assert.ok(css.includes('grid-template-columns:20px minmax(0,1fr)'));
   assert.ok(css.includes('.nav-item.selected .pixel-icon'));
   assert.ok(!css.includes('background-image:var(--active-image)'),'cropped selector skin must not be used');
-  const start=ui.indexOf('const pixelGlyphs=');
-  const end=ui.indexOf('function icon(',start);
-  assert.ok(start!==-1&&end>start);
-  const rows=[...ui.slice(start,end).matchAll(/'([.#]+)'/g)].map(m=>m[1]);
-  assert.ok(rows.length>=100,'Expected pixel-grid sprites for icons and controls');
-  assert.ok(rows.every(r=>r.length===16),'Pixel glyph rows must be exactly 16 pixels wide');
-  assert.ok(ui.includes("pixel.setAttribute('width',String(end-x))"));
-  assert.ok(css.includes('shape-rendering:crispEdges'));
+  assert.ok(ui.includes('const lucidePaths='));
+  assert.ok(ui.includes("svg.setAttribute('viewBox','0 0 24 24')"));
+  assert.ok(ui.includes("element.setAttribute('d',args[0])"));
+  assert.ok(!ui.includes('const pixelGlyphs='));
+  assert.ok(css.includes('shape-rendering:geometricPrecision'));
 });
 
 test('Spotify playlist images are forwarded and rendered with safe album-art fallbacks',()=>{
