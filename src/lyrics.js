@@ -1,3 +1,4 @@
+import {lookupPlainBackup} from './lyrics-ovh.js';
 // Public LRCLIB lookup: exact match first, then a carefully scored search fallback.
 // Never display another song's lyrics merely because its title looks similar.
 const cache = new Map();
@@ -88,6 +89,9 @@ export async function lookupLyrics(track,signal) {
     const plain=String(candidate.plainLyrics||'').split(/\r?\n/).filter(Boolean);
     value={lines,plain,status:lines.length?'synced':plain.length?'plain':'missing'};
   }
+  // Try a different public API only after LRCLIB cannot identify this song.
+  // The secondary provider returns plain text, never synchronized timestamps.
+  if(value.status==='missing')value=await lookupPlainBackup(track,signal)||value;
   // Cache misses briefly, since provider coverage changes.
   cache.set(key,{value,until:Date.now()+(value.status==='missing'?60000:3600000)});
   return value;

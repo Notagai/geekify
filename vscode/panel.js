@@ -92,6 +92,19 @@ const pixelGlyphs={
     '......##........',
     '................'
   ],
+  management:[
+    '................',
+    '..##..#######...',
+    '..##..#######...',
+    '................',
+    '..##..#######...',
+    '..##..#######...',
+    '................',
+    '..##..#######...',
+    '..##..#######...',
+    '................',
+    '................'
+  ],
   playlists:[
     '................',
     '..##..########..',
@@ -398,6 +411,7 @@ function renderLyrics(){
   if(key!==lyricTrackKey){
     lyricTrackKey=key;lyricActiveIndex=-1;lyricNodes=[];
     paper.replaceChildren();
+    paper.classList.remove('unsynced-lyrics');
     if(state.track){
       const info=textNode('div','lyrics-song-info','');
       info.append(textNode('strong','',state.track.title||''));
@@ -412,8 +426,12 @@ function renderLyrics(){
       el.setAttribute('data-line',String(i));
       lyricNodes.push(el);holder.append(el);
     });
+    if(state.lyricsStatus==='plain'){
+      paper.classList.add('unsynced-lyrics');
+      holder.classList.add('plain-lyrics');
+      paper.append(textNode('small','secondary','UNSYNCED LYRICS · Scroll to read'));
+    }
     paper.append(holder);
-    if(state.lyricsStatus==='plain')paper.append(textNode('small','secondary','UNSYNCED LYRICS'));
   }
   if(state.lyricsStatus!=='synced'||!lyricNodes.length)return;
   const now=advance();

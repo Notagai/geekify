@@ -495,3 +495,18 @@ body{font-size:20px;}
 .item-row .item{flex:1;min-width:0;border:0;}
 .item-row .pin-playlist,.item-row .queue-add{margin-right:8px;align-self:center;}
 @media(max-width:690px){.item-row .pin-playlist,.item-row .queue-add{padding-inline:5px;}}
+
+/* Six equal-width tabs, with icon-only mode when labels no longer fit. */
+.workspace{container-type:inline-size;}
+.section-tabs{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr));overflow:visible!important;gap:clamp(2px,.5vw,6px);padding-inline:clamp(0px,.7vw,10px);}
+.section-tab{min-width:0!important;width:100%;flex:none!important;padding:8px 3px!important;font-size:clamp(16px,1.5vw,24px);white-space:nowrap;overflow:hidden;}
+.section-tab .nav-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.section-tab .pixel-icon{width:19px;height:19px;}
+@container (max-width: 800px){
+ .section-tab{justify-content:center;gap:0;min-height:38px;}
+ .section-tab .nav-text{display:none!important;}
+ .section-tab .pixel-icon{width:22px;height:22px;}
+}
+.paper-content.unsynced-lyrics{overflow-y:auto;scrollbar-width:thin;overscroll-behavior:contain;}
+.lyrics-scroll.plain-lyrics{padding-block:8px 48px;min-height:0;gap:11px;}
+.lyrics-scroll.plain-lyrics .lyric-row{opacity:1;animation:none!important;}
