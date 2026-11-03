@@ -513,7 +513,8 @@ function showPlaylistMenu(item,anchor){
   const left=Math.max(8,Math.min(rect.right-164,window.innerWidth-172));
   const below=rect.bottom+6;
   const top=below+56>window.innerHeight?Math.max(8,rect.top-62):below;
-  menu.style.left=left+'px';menu.style.top=top+'px';
+  menu.style.setProperty('left',left+'px','important');
+  menu.style.setProperty('top',top+'px','important');
   document.body.append(menu);
   floatingPlaylistMenu=menu;
 }
@@ -551,6 +552,8 @@ function renderList(items){
     const details=textNode('div','playlist-hero-details','');
     details.append(heading);
     details.append(textNode('small','secondary',(items||[]).length+' songs'));
+    button('playlist-play',details,'▶ Play playlist',()=>send('playPlaylist'));
+
     hero.append(details);paper.append(hero);
   }else paper.append(heading);
   if(activeTab==='search'){
@@ -642,7 +645,7 @@ function renderList(items){
       menuButton.setAttribute('aria-expanded',String(openPlaylistMenuId===item.id));
       if(openPlaylistMenuId===item.id)showPlaylistMenu(item,menuButton);
     }
-    if(item.type==='track'&&activeTab!=='management'){
+    if(item.type==='track'&&activeTab!=='management'&&!(activeTab==='library'&&state.browseType==='playlist')){
       const add=button('queue-add',row,'+ Queue',(event)=>{
         event?.stopPropagation?.();send('planTrack',{uri:item.uri});
       });
@@ -654,7 +657,10 @@ function renderList(items){
       else send('playlist',{id:item.id});
     });
     else if(item.type==='device')itemButton.addEventListener('click',()=>send('transfer',{deviceId:item.id}));
-    else if(item.type==='track')itemButton.addEventListener('click',()=>send('playItem',{uri:item.uri}));
+    else if(item.type==='track')itemButton.addEventListener('click',()=>{
+      if(activeTab==='library'&&state.browseType==='playlist')send('playPlaylist',{uri:item.uri});
+      else send('playItem',{uri:item.uri});
+    });
     else itemButton.addEventListener('click',()=>send('openResult',{uri:item.uri}));
     list.append(row);
   });
