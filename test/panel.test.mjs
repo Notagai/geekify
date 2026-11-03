@@ -177,3 +177,12 @@ test('settings file, default lyric size, pinned playlists and scrolling renderer
  assert.ok(ui.includes("player.classList.toggle('cover-expanded'"));
  assert.ok(css.includes('.player-panel.cover-expanded'));
 });
+
+test('playlist playback uses the embedded Spotify device instead of requiring Desktop',()=>{
+ const ui=readFileSync(resolve(root,'vscode/panel.js'),'utf8');
+ const ext=readFileSync(resolve(root,'vscode/extension.cjs'),'utf8');
+ assert.ok(ui.includes('sdkPlayer.activateElement()'));
+ assert.ok(ui.includes("send('playPlaylist',{...extra,deviceId:sdkDevice})"));
+ assert.ok(ext.includes('await api.playUri(context,targetDevice)'));
+ assert.ok(ext.includes('await api.playPlaylist(context,selected.uri,targetDevice)'));
+});
