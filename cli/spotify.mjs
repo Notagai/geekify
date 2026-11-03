@@ -48,6 +48,10 @@ export class SpotifyApi {
   }
   async playback(){return this.request('/me/player');}
   async queue(){return this.request('/me/player/queue');}
+  async addToQueue(uri,deviceId){
+    if(!/^spotify:track:[A-Za-z0-9]+$/.test(uri||''))throw new Error('Invalid track URI');
+    return this.request('/me/player/queue',{method:'POST',query:{uri,...(deviceId?{device_id:deviceId}:{})}});
+  }
   async seek(positionMs,deviceId){
     return this.request('/me/player/seek',{method:'PUT',query:{
       position_ms:Math.max(0,Math.floor(Number(positionMs)||0)),

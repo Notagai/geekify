@@ -17,7 +17,7 @@ const DEMO_LYRICS=[
   {timeMs:112000,text:'the city keeps glowing'}
 ];
 const allowedActions=new Set(['toggle','next','previous','seek','save','shuffle','repeat',
-  'playItem','openResult','transfer','search','daily','recent','library','libraryFolder','libraryBack','playlist','devices','queue','openWeb','refresh']);
+  'playItem','openResult','planTrack','movePlanned','removePlanned','submitPlan','management','transfer','search','daily','recent','library','libraryFolder','libraryBack','playlist','devices','queue','openWeb','refresh']);
 const safeError=e=>String(e?.message||e).replace(/[\x00-\x1f\x7f-\x9f]/g,' ').slice(0,175);
 
 let activePanel;
@@ -80,12 +80,12 @@ async function openPanel(context,forceDemo=false){
   let track=demo?DEMO:null,playing=demo,progressMs=demo?75000:0;
   let lyrics=demo?DEMO_LYRICS:[],lyricsStatus=demo?'synced':'missing';
   let playback=null,repeat='off',shuffle=false,deviceName='',deviceRestricted=false;
-  let queue=[],items=[],browseType='',playlist=null,notice='';
+  let queue=[],items=[],browseType='',playlist=null,notice='',planned=[];
   function send(message){if(!closed)void panel.webview.postMessage(message);}
   function emit(){
     const scopes=String(auth.loadConfig().token?.scope||'').split(/\s+/);
     send({type:'state',demo,track,playing,progressMs,lyrics,lyricsStatus,
-      queue,items,browseType,playlistName:playlist?.name||'',
+      queue,planned,items,browseType,playlistName:playlist?.name||'',
       playlistImageUrl:playlist?.imageUrl||'',notice,repeat,shuffle,
       deviceName,deviceRestricted,deviceId:playback?.device?.id||'',
       canStream:!demo&&scopes.includes('streaming')});
@@ -170,9 +170,9 @@ async function openPanel(context,forceDemo=false){
     else if(type==='library-playlists')response=(await api.playlists())?.items||[];
     else if(type==='playlist')response=spotify.playlistTrackItems(await api.playlistItems(playlist.id));
     else if(type==='devices')response=(await api.devices())?.devices||[];
-    else if(type==='queue'){
-      queue=(await api.queue())?.queue?.slice(0,20).map(spotify.trackInfo).filter(Boolean)||[];
-      emit();return;
+    else if(type==='management'||type==='queue'){
+      queue=(await api.queue())?.queue?.slice(0,5).map(spotify.trackInfo).filter(Boolean)||[];
+      browseType='management';emit();return;
     }
     browseType=type;
     items=response.map(item=>{
@@ -206,12 +206,41 @@ async function openPanel(context,forceDemo=false){
       else await browse('library');
       return;
     }
-    if(name==='search'||name==='daily'||name==='recent'||name==='library'||name==='devices'||name==='queue'){
+    if(name==='search'||name==='daily'||name==='recent'||name==='library'||name==='devices'||name==='queue'||name==='management'){
       await browse(name,message.query);return;
     }
     if(name==='playlist'){
       const selected=items.find(x=>x.type==='playlist'&&x.id===message.id);
       if(selected){playlist=selected;await browse('playlist');}return;
+    }
+    if(name==='planTrack'){
+      const selected=items.find(x=>x.type==='track'&&x.uri===message.uri);
+      if(selected&&planned.length<5&&!planned.some(x=>x.uri===selected.uri)){
+        planned.push({uri:selected.uri,title:selected.title,artist:selected.subtitle,imageUrl:selected.imageUrl});
+        notice='Added to Geekify play-next plan';emit();
+      }return;
+    }
+    if(name==='movePlanned'||name==='removePlanned'){
+      const i=Number(message.index);
+      if(!Number.isInteger(i)||i<0||i>=planned.length)return;
+      if(name==='removePlanned')planned.splice(i,1);
+      else{
+        const j=i+Number(message.delta);
+        if(!Number.isInteger(j)||j<0||j>=planned.length||Math.abs(j-i)!==1)return;
+        [planned[i],planned[j]]=[planned[j],planned[i]];
+      }
+      emit();return;
+    }
+    if(name==='submitPlan'){
+      if(demo||!planned.length)return;
+      if(deviceRestricted)throw new Error('This device restricts Spotify queue changes.');
+      let sent=0;
+      for(const item of [...planned]){
+        await api.addToQueue(item.uri,device());
+        planned.shift();sent++;
+      }
+      notice=sent+' tracks submitted to Spotify queue. Spotify may not guarantee order.';
+      await browse('management');return;
     }
     if(demo){
       if(name==='toggle')playing=!playing;
