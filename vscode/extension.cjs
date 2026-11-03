@@ -17,7 +17,7 @@ const DEMO_LYRICS=[
   {timeMs:112000,text:'the city keeps glowing'}
 ];
 const allowedActions=new Set(['toggle','next','previous','seek','save','shuffle','repeat',
-  'playItem','openResult','togglePin','openPlaylistInSpotify','lyricsSize','planTrack','movePlanned','removePlanned','submitPlan','management','transfer','search','daily','recent','library','libraryFolder','libraryBack','playlist','retryPlaylist','devices','queue','openWeb','refresh']);
+  'playItem','playPlaylist','openResult','togglePin','openPlaylistInSpotify','lyricsSize','planTrack','movePlanned','removePlanned','submitPlan','management','transfer','search','daily','recent','library','libraryFolder','libraryBack','playlist','retryPlaylist','devices','queue','openWeb','refresh']);
 const safeError=e=>String(e?.message||e).replace(/[\x00-\x1f\x7f-\x9f]/g,' ').slice(0,175);
 
 let activePanel;
@@ -311,6 +311,19 @@ async function openPanel(context,forceDemo=false){
     if(name==='playlist'){
       const selected=items.find(x=>x.type==='playlist'&&x.id===message.id);
       if(selected){playlist=selected;await browse('playlist');}return;
+    }
+    if(name==='playPlaylist'){
+      if(!playlist?.id||!/^[A-Za-z0-9]+$/.test(playlist.id))
+        throw new Error('Open a playlist before playing it.');
+      if(deviceRestricted)throw new Error('This Spotify device blocks remote playback.');
+      const context='spotify:playlist:'+playlist.id;
+      // A clicked song starts the playlist context at that song, rather than
+      // playing the track alone and discarding the playlist sequence.
+      const selected=items.find(x=>x.type==='track'&&x.uri===message.uri);
+      if(selected){
+        await api.playPlaylist(context,selected.uri,device());
+      }else await api.playUri(context,device());
+      return;
     }
     if(name==='planTrack'){
       const selected=items.find(x=>x.type==='track'&&x.uri===message.uri);
