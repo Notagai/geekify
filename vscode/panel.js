@@ -581,7 +581,7 @@ function renderList(items){
   });
   if(activeTab==='library'&&state.browseType==='playlist'&&state.browseError){
     list.append(textNode('p','note','Could not load all playlist tracks: '+state.browseError));
-    button('setting-control',list,'Retry playlist tracks',()=>send('playlist',{id:state.playlistId}));
+    button('setting-control',list,'Retry playlist tracks',()=>send('retryPlaylist'));
   }
   if(!items?.length&&!(activeTab==='library'&&state.browseType==='library-playlists'))
     list.append(textNode('p','secondary',
