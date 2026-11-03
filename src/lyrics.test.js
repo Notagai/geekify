@@ -49,7 +49,7 @@ test('lyrics.ovh backup still runs if LRCLIB returns server errors',async()=>{
   const oldFetch=globalThis.fetch;
   globalThis.fetch=async url=>String(url).includes('lrclib.net')
     ?{ok:false,status:503}
-    :{ok:true,status:200,json:async()=>({lyrics:'first line\\nsecond line'})};
+    :{ok:true,status:200,json:async()=>({lyrics:'first line\nsecond line'})};
   try{
     const result=await lookupLyrics({title:'Backup Test Song',primaryArtist:'Backup Test Artist',durationMs:185000});
     assert.equal(result.status,'plain');
