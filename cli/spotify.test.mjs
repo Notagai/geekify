@@ -75,3 +75,34 @@ test('playlist pagination keeps first page after later page fails',async()=>{
   assert.equal(pages.length,1);
   assert.equal(pages[0][0].id,'playlist1');
 });
+
+test('playlist tracks paginate through every available page',async()=>{
+  const api=new SpotifyApi();
+  const offsets=[];
+  api.playlistItems=async (_id,offset)=>{
+    offsets.push(offset);
+    return offset===0
+      ?{offset:0,limit:50,next:'more',items:[{item:{type:'track',id:'a',name:'First',uri:'spotify:track:aaa'}}]}
+      :{offset:50,limit:50,next:null,items:[{track:{type:'track',id:'b',name:'Second',uri:'spotify:track:bbb'}}]};
+  };
+  const result=await api.allPlaylistItems('123');
+  assert.deepEqual(offsets,[0,50]);
+  assert.deepEqual(playlistTrackItems(result).map(item=>trackInfo(item).title),['First','Second']);
+});
+test('playlist tracks preserve fetched rows if a later page fails',async()=>{
+  const api=new SpotifyApi();
+  api.playlistItems=async (_id,offset)=>{
+    if(offset===0)return {offset:0,limit:50,next:'more',items:[{item:{id:'a',name:'Kept',uri:'spotify:track:aaa'}}]};
+    const error=new Error('Spotify returned 403');error.status=403;throw error;
+  };
+  await assert.rejects(api.allPlaylistItems('123'),error=>{
+    assert.equal(error.status,403);
+    assert.equal(error.partialItems.length,1);
+    return true;
+  });
+});
+test('playlist-track pagination rejects malformed responses',async()=>{
+  const api=new SpotifyApi();
+  api.playlistItems=async()=>null;
+  await assert.rejects(api.allPlaylistItems('123'),/invalid playlist tracks response/);
+});
