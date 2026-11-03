@@ -94,16 +94,16 @@ export async function lookupLyrics(track,signal) {
       if(candidate?.syncedLyrics)break;
     }
   }
-  let value;
-  if(scoreMatch(candidate,track)<0) value={lines:[],plain:[],status:'missing'};
-  else {
+  // Two-pass priority: prefer synchronized lyrics from every configured
+  // provider before settling for plain lyrics. Currently LRCLIB is the only
+  // authorized timed provider; lyrics.ovh is the plain-text backup.
+  let value={lines:[],plain:[],status:'missing'};
+  if(scoreMatch(candidate,track)>=0){
     const lines=parseLrc(candidate.syncedLyrics);
     const plain=String(candidate.plainLyrics||'').split(/\r?\n/).filter(Boolean);
-    value={lines,plain,status:lines.length?'synced':plain.length?'plain':'missing'};
+    value={lines,plain,status:lines.length?'synced':plain.length?'plain':'missing',source:'LRCLIB'};
   }
-  // Try a different public API only after LRCLIB cannot identify this song.
-  // The secondary provider returns plain text, never synchronized timestamps.
-  if(value.status==='missing'){
+  if(value.status!=='synced'&&value.status!=='plain'){
     const variants=[track.title,cleanTitle(track.title)].filter((v,i,a)=>v&&a.indexOf(v)===i);
     for(const title of variants){
       value=await lookupPlainBackup({...track,title},signal)||value;
