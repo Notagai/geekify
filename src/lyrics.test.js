@@ -44,3 +44,28 @@ test('plain only lyrics are reported as unsynced, not misrepresented as synced',
     assert.equal(r.status,'plain');assert.equal(r.lines.length,0);assert.deepEqual(r.plain,['one','two']);
   }finally{globalThis.fetch=oldFetch;}
 });
+
+test('lyrics.ovh backup still runs if LRCLIB returns server errors',async()=>{
+  const oldFetch=globalThis.fetch;
+  globalThis.fetch=async url=>String(url).includes('lrclib.net')
+    ?{ok:false,status:503}
+    :{ok:true,status:200,json:async()=>({lyrics:'first line\nsecond line'})};
+  try{
+    const result=await lookupLyrics({title:'Backup Test Song',primaryArtist:'Backup Test Artist',durationMs:185000});
+    assert.equal(result.status,'plain');
+    assert.deepEqual(result.plain,['first line','second line']);
+  }finally{globalThis.fetch=oldFetch;}
+});
+test('title-only LRCLIB search finds verified artist when constrained search misses',async()=>{
+  const oldFetch=globalThis.fetch;
+  globalThis.fetch=async url=>{
+    const address=String(url);
+    if(address.includes('/api/get?'))return {ok:false,status:404};
+    return {ok:true,status:200,json:async()=>address.includes('q=')
+      ?[{trackName:'Fallback Search Song',artistName:'Fallback Search Artist',duration:190,syncedLyrics:'[00:01] line'}]:[]};
+  };
+  try{
+    const result=await lookupLyrics({title:'Fallback Search Song',primaryArtist:'Fallback Search Artist',durationMs:190000});
+    assert.equal(result.status,'synced');
+  }finally{globalThis.fetch=oldFetch;}
+});
