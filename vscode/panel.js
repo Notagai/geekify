@@ -499,7 +499,10 @@ function renderList(items){
       const arrow=textNode('span','folder-chevron','');arrow.append(icon('chevron'));button.append(arrow);
     }
     if(item.type==='folder')button.addEventListener('click',()=>send('libraryFolder',{id:item.id}));
-    else if(item.type==='playlist')button.addEventListener('click',()=>send('playlist',{id:item.id}));
+    else if(item.type==='playlist')button.addEventListener('click',()=>{
+      if(activeTab==='search')send('openResult',{uri:item.uri});
+      else send('playlist',{id:item.id});
+    });
     else if(item.type==='device')button.addEventListener('click',()=>send('transfer',{deviceId:item.id}));
     else if(item.type==='track')button.addEventListener('click',()=>send('playItem',{uri:item.uri}));
     else button.addEventListener('click',()=>send('openResult',{uri:item.uri}));
