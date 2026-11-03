@@ -526,3 +526,7 @@ body{font-size:20px;}
 .paper-tab.selected *, .nav-item.selected .nav-text{color:#321b10!important;opacity:1!important;}
 .item-row{min-width:0;}
 .item-row .item-title,.item-row .item-subtitle{overflow-wrap:anywhere;}
+
+/* Playlist filtering must override row display rules. */
+.item-row[hidden], .playlist-filter-empty[hidden]{display:none!important}
+.playlist-search{display:block;width:100%;margin:8px 0 10px}
