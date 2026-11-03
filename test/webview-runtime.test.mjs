@@ -10,7 +10,7 @@ test('responsive player bootstraps and renders state with a mocked VS Code DOM',
       this.tag=tag;this.children=[];this.attrs={};this.handlers={};
       this.style={setProperty(name,value){this[name]=value;}};
       this.classList={toggle(){},add(){},remove(){}};
-      this.textContent='';this.src='';this.value='';this.hidden=false;
+      this.textContent='';this.src='';this.value='';this.hidden=false;this.dataset={};
     }
     append(...nodes){this.children.push(...nodes);}
     replaceChildren(...nodes){this.children=[...nodes];}
