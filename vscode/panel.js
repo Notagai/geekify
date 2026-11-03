@@ -277,6 +277,7 @@ let state={demo:true,track:null,progressMs:0,playing:false,lyrics:[],items:[],qu
 let activeTab='now',activeSub='lyrics',updatedAt=performance.now();
 let sdkPlayer=null,sdkDevice=null,tokenSequence=0,lyricSignature='',lastSearch='';
 let lyricSize=28;
+let searchFilter='all',searchTimer=null;
 let lyricNodes=[],lyricTrackKey='',lyricActiveIndex=-1;
 lyricSize=Math.max(18,Math.min(46,lyricSize));
 const tokens=new Map();
@@ -321,7 +322,7 @@ for(const [id,title] of navDefs){
     if(id==='now'&&previousTab!=='now'){
       lyricTrackKey='';lyricActiveIndex=-1;lyricNodes=[];
     }
-    if(id==='search')send(lastSearch?'search':'daily',{query:lastSearch});
+    if(id==='search')send('search',{query:lastSearch,source:searchFilter==='library'?'library':'spotify'});
     if(id==='library'||id==='devices'||id==='management')send(id);
     redraw();
   });
@@ -569,22 +570,36 @@ function renderList(items){
     hero.append(details);paper.append(hero);
   }else paper.append(heading);
   if(activeTab==='search'){
-    const shortcuts=textNode('div','search-shortcuts','');
-    // Daily Mixes load automatically when Search opens.
-    button('search-shortcut',shortcuts,'Recently Played',()=>send('recent'));
-    paper.append(shortcuts);
     const input=document.createElement('input');input.className='search-input';
-    input.placeholder='Search tracks…';input.setAttribute('aria-label','Search Spotify');
-    input.value=lastSearch;
-    input.addEventListener('input',()=>{lastSearch=input.value;});
+    input.type='search';input.placeholder='Search songs, artists, albums, playlists, podcasts and your library…';
+    input.setAttribute('aria-label','Universal search');input.value=lastSearch;
+    const submit=()=>send('search',{query:lastSearch,source:searchFilter==='library'?'library':'spotify'});
+    input.addEventListener('input',()=>{
+      lastSearch=input.value;
+      if(searchTimer!==null)clearTimeout(searchTimer);
+      searchTimer=setTimeout(()=>{searchTimer=null;submit();},350);
+    });
     input.addEventListener('keydown',event=>{
       if(event.key==='Enter'){
-        lastSearch=input.value.trim();
-        send('search',{query:lastSearch});
-        input.blur();
+        if(searchTimer!==null){clearTimeout(searchTimer);searchTimer=null;}
+        lastSearch=input.value.trim();submit();input.blur();
       }
     });
     paper.append(input);
+    const filters=textNode('div','search-filters','');
+    filters.setAttribute('role','group');filters.setAttribute('aria-label','Search result filters');
+    for(const [key,label] of [['all','All'],['track','Songs'],['artist','Artists'],['album','Albums'],['playlist','Playlists'],['show','Podcasts'],['episode','Episodes'],['library','Your Library']]){
+      const chip=button('search-filter'+(searchFilter===key?' selected':''),filters,label,()=>{
+        if(searchFilter===key)return;
+        const wasLibrary=searchFilter==='library';searchFilter=key;
+        if(wasLibrary!==(key==='library'))submit();
+        else renderList(state.items||[]);
+      });
+      chip.setAttribute('aria-pressed',String(searchFilter===key));
+    }
+    paper.append(filters);
+    if(state.browseLoading)paper.append(textNode('p','secondary','Searching…'));
+    if(state.browseError)paper.append(textNode('p','note',state.browseError));
   }
   const list=textNode('div','list','');paper.append(list);
   if(activeTab==='library'&&state.browseType==='library-playlists'){
@@ -623,8 +638,11 @@ function renderList(items){
     search.addEventListener('input',applyFilter);
     paper.insertBefore(search,list);
   }
-  (items||[]).forEach(item=>{
+  const visibleItems=activeTab==='search'&&searchFilter!=='all'&&searchFilter!=='library'
+    ?(items||[]).filter(item=>item.type===searchFilter):(items||[]);
+  (visibleItems||[]).forEach(item=>{
     const row=textNode('div','item-row','');
+    if(activeTab==='search')row.dataset.searchType=item.type;
     if(playlistListing){
       row.dataset.searchText=[item.title,item.subtitle].filter(Boolean).join(' ').toLocaleLowerCase();
       row.hidden=Boolean(playlistSearchQuery.trim())&&!row.dataset.searchText.includes(playlistSearchQuery.trim().toLocaleLowerCase());
@@ -689,14 +707,14 @@ function renderList(items){
     list.append(textNode('p','note','Playlist details: '+state.browseError));
     button('setting-control',list,'Retry playlist tracks',()=>send('retryPlaylist'));
   }
-  if(!items?.length&&!(activeTab==='library'&&state.browseType==='library-playlists')){
+  if(!visibleItems?.length&&!(activeTab==='library'&&state.browseType==='library-playlists')){
     const playlistEmpty=activeTab==='library'&&state.browseType==='playlist';
     const received=Number(state.playlistRowsReceived)||0;
     list.append(textNode('p','secondary',playlistEmpty
       ?state.browseError?'No playable tracks were recognized. See playlist details above.'
         :received?'Spotify returned '+received+' playlist entries, but none had playable track details.'
           :'Spotify returned zero playlist entries for this account or playlist.'
-      :activeTab==='devices'?'No devices returned by Spotify.':'No tracks here yet.'));
+      :activeTab==='devices'?'No devices returned by Spotify.':activeTab==='search'?'No matching results. Try another filter or search term.':'No tracks here yet.'));
     if(playlistEmpty){
       button('setting-control',list,'Retry playlist tracks',()=>send('retryPlaylist'));
       button('setting-control',list,'Open playlist in Spotify',()=>send('openPlaylistInSpotify'));
