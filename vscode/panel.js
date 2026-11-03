@@ -255,8 +255,7 @@ let lyricSize=Number(vscode.getState?.()?.lyricSize)||26;
 lyricSize=Math.max(18,Math.min(46,lyricSize));
 const tokens=new Map();
 
-// Every region sizes to the real webview. A narrow editor stacks the sidebar,
-// parchment and transport controls; no more 1200px canvas scaled to a stamp.
+// The section tabs sit above the full-width parchment, with a responsive player below.
 board.style.setProperty('--wood-image','url("'+assets['frame/wood-tile']+'")');
 board.style.setProperty('--paper-tile-image','url("'+assets['paper/grain-tile']+'")');
 board.style.setProperty('--paper-top-image','url("'+assets['paper/torn-top']+'")');
@@ -279,16 +278,16 @@ brandBadge.append(icon('brand'));
 make('span','brand-label',brandBadge,'geekify.');
 const connection=make('span','connection',header,'● No active device');
 const workspace=make('div','workspace',frame);
-const sidebar=make('aside','sidebar',workspace);
-const nav=make('nav','sidebar-nav',sidebar);
+const nav=make('nav','section-tabs',workspace);
 nav.setAttribute('aria-label','Geekify sections');
+nav.setAttribute('role','tablist');
 const navDefs=[
- ['now','Now Playing'],['search','Search'],['library','Library'],
- ['management','Management'],['devices','Devices'],['settings','Settings']
+ ['now','Current'],['library','Library'],['management','Management'],
+ ['search','Search'],['devices','Devices'],['settings','Settings']
 ];
 const navButtons=[];
 for(const [id,title] of navDefs){
-  const b=button('nav-item',nav,undefined,()=>{
+  const b=button('nav-item section-tab',nav,undefined,()=>{
     activeTab=id;activeSub='lyrics';lyricSignature='';
     if(id==='search')send('search',{query:lastSearch});
     if(id==='library'||id==='devices'||id==='management')send(id);
@@ -297,24 +296,19 @@ for(const [id,title] of navDefs){
   b.append(icon(id));
   make('span','nav-text',b,title);
   b.setAttribute('aria-label',title);
+  b.setAttribute('role','tab');
+  b.setAttribute('aria-controls','geekify-page');
   navButtons.push({id,button:b});
 }
-const decor=make('div','sidebar-decor',sidebar);
+const sheet=make('section','parchment',workspace);
+sheet.setAttribute('id','geekify-page');
+sheet.setAttribute('role','tabpanel');
+const decor=make('div','sidebar-decor parchment-decor',sheet);
 for(const [cls,label] of [['decor-flowers','Flowers'],['decor-photo','Photo']]){
   const obj=button('decor-interactive '+cls,decor,undefined,()=>{
     obj.classList.toggle('touched');
   });
   obj.setAttribute('aria-label','Move '+label+' decoration');
-}
-const sheet=make('section','parchment',workspace);
-const tabs=make('div','paper-tabs',sheet);
-const subButtons=[];
-for(const id of ['lyrics']){
-  const b=button('paper-tab',tabs,id[0].toUpperCase()+id.slice(1),()=>{
-    activeTab='now';activeSub=id;lyricSignature='';
-    redraw();
-  });
-  subButtons.push({id,button:b});
 }
 const paper=make('div','paper-content',sheet);
 paper.setAttribute('aria-live','polite');
@@ -594,13 +588,8 @@ function redraw(){
   navButtons.forEach(({id,button})=>{
     const selected=id===activeTab;
     button.classList.toggle('selected',selected);
-    button.setAttribute('aria-current',selected?'page':'false');
-  });
-  tabs.hidden=activeTab!=='now';
-  subButtons.forEach(({id,button})=>{
-    const selected=id===activeSub&&activeTab==='now';
-    button.classList.toggle('selected',selected);
-    button.setAttribute('aria-pressed',String(selected));
+    button.setAttribute('aria-selected',String(selected));
+    button.setAttribute('tabindex',selected?'0':'-1');
   });
   const song=state.track||{};
   board.classList.toggle('is-playing',Boolean(state.playing));

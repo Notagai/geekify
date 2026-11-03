@@ -142,3 +142,18 @@ test('management, VT323 and stable lyric size are wired',()=>{
  assert.ok(html.includes('family=VT323'));
  assert.ok(!ui.includes("'Run geekify login to authorize Spotify with streaming access.'"));
 });
+
+test('six full-width section tabs are ordered correctly without a second tab bar',()=>{
+ const js=readFileSync(resolve(root,'vscode/panel.js'),'utf8');
+ const css=readFileSync(resolve(root,'vscode/panel.css'),'utf8');
+ const sequence=["['now','Current']","['library','Library']","['management','Management']",
+   "['search','Search']","['devices','Devices']","['settings','Settings']"];
+ let previous=-1;
+ for(const marker of sequence){const index=js.indexOf(marker);assert.ok(index>previous,'Incorrect tab order: '+marker);previous=index;}
+ assert.ok(js.includes("make('nav','section-tabs',workspace)"));
+ assert.ok(!js.includes("make('div','paper-tabs',sheet)"));
+ assert.ok(!js.includes("make('aside','sidebar',workspace)"));
+ assert.ok(js.includes("sheet.setAttribute('role','tabpanel')"));
+ assert.ok(css.includes('.workspace{display:flex!important;flex-direction:column'));
+ assert.ok(css.includes('.parchment{flex:1 1 auto;'));
+});

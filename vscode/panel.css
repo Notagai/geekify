@@ -428,3 +428,46 @@ body{font-size:20px;}
  .management-song{flex-wrap:wrap}.management-actions{margin-left:auto}}
 @media(prefers-reduced-motion:reduce){.desk,.lyric,.brand-vine{animation:none!important;}
  .nav-item,.paper-tab,.transport,.folder-item,.lyric{transition:none!important;}}
+
+/* Full-width paper with one consistent section tab bar. */
+.workspace{display:flex!important;flex-direction:column;min-height:0;min-width:0;gap:0!important;}
+.section-tabs{flex:none;display:flex;align-items:stretch;gap:5px;min-width:0;
+ padding:0 10px 0 12px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;
+ scrollbar-color:#a8754d transparent;}
+.section-tab{flex:1 0 auto;min-width:max-content;min-height:44px;height:auto;
+ display:flex;align-items:center;justify-content:center;gap:8px;
+ padding:9px clamp(10px,1.8vw,25px);border:2px solid #815235;
+ border-bottom:0;border-radius:7px 7px 0 0;
+ background:#dbac79;color:#583521;box-shadow:inset 2px 2px #f8d2a5;
+ font-size:clamp(18px,1.6vw,24px);text-shadow:none;transform:none;}
+.section-tab .pixel-icon{width:19px;height:19px;flex:none;}
+.section-tab:hover{background:#edc69b;transform:none;}
+.section-tab.selected{color:#502d19;background:#f1d3aa;border-color:#865e42;
+ box-shadow:inset 2px 2px #fff0cf;position:relative;z-index:3;}
+.section-tab.selected::after{content:'';position:absolute;bottom:-3px;left:0;right:0;
+ height:5px;background:#f1d3aa;}
+.section-tab.selected .pixel-icon{color:#6c3f23;}
+.parchment{flex:1 1 auto;min-height:0;width:100%;border-radius:3px 8px 7px 7px;
+ padding:clamp(15px,2vw,26px) clamp(19px,2.5vw,36px) 15px;}
+.paper-content{padding:7px 8px 18px;overflow-y:auto;min-height:0;}
+.parchment-decor{position:absolute;bottom:8px;right:14px;z-index:2;
+ width:auto;height:48px;min-height:0;display:flex;flex:none;align-items:flex-end;
+ gap:0;opacity:.75;pointer-events:auto;}
+.parchment-decor .decor-flowers{width:45px;height:42px;background-size:100% auto;}
+.parchment-decor .decor-photo{width:55px;height:43px;margin-left:-6px;background-size:100% auto;}
+.parchment-decor .decor-interactive{max-height:44px;}
+@media(max-width:900px){
+ .workspace{display:flex;}
+ .section-tabs{justify-content:flex-start;padding-inline:3px;gap:3px;}
+ .section-tab{flex:0 0 auto;padding:7px 13px;font-size:20px;min-height:39px;}
+ .section-tab .pixel-icon{width:16px;height:16px;}
+ .parchment{padding:15px 18px 12px;}
+}
+@media(max-width:690px){
+ .section-tab{font-size:18px;padding:7px 11px;min-height:36px;}
+ .parchment{flex:1 1 auto;min-height:0;padding:13px 15px;}
+ .paper-content{font-size:20px;padding:5px 4px 16px;}
+ .parchment-decor{height:35px;right:7px;bottom:4px;opacity:.65;}
+ .parchment-decor .decor-flowers{width:31px;height:31px;}
+ .parchment-decor .decor-photo{width:37px;height:32px;}
+}
