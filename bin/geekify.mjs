@@ -3,7 +3,9 @@ import {createInterface} from 'node:readline/promises';
 import {spawn} from 'node:child_process';
 import {randomBytes} from 'node:crypto';
 import {readFileSync,rmSync} from 'node:fs';
-import {dirname,join} from 'node:path';
+import {dirname,join,resolve} from 'node:path';
+import companionLoader from '../vscode/companion-loader.cjs';
+const {installLink,readRegistry,selectCompanion}=companionLoader;
 import {homedir} from 'node:os';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {runVsCode,runNpm} from '../cli/vscode-command.mjs';
@@ -23,7 +25,9 @@ const help='geekify.  /  visual music player in VS Code\n\n'+
 '  geekify logout      Disconnect Spotify\n'+
 '  geekify doctor      Diagnose Spotify permissions and devices\n'+
 '  geekify panel-doctor Diagnose the VS Code extension and launcher\n'+
-'  geekify web         Start the existing browser visualizer\n\n'+
+'  geekify web         Start the existing browser visualizer\n'+
+'  geekify companion link <manifest.json> Register a generic panel companion\n'+
+'  geekify --<companion-id> Open a registered panel companion\n\n'+
 'The visual extension is automatically installed/updated when needed.\n'+
 'The panel uses the official Web Playback SDK when supported; VS Code may\n'+
 'lack the DRM required for playback. The Spotify web player is the fallback.\n';
@@ -88,7 +92,8 @@ async function panelDoctor(){
   console.log('If the extension is installed but inactive: Ctrl+Shift+P > Developer: Reload Window.');
   console.log('Then check Ctrl+Shift+P > Geekify: Open Player.');
 }
-async function launchPanel(demo=false){
+async function launchPanel(demo=false,companionId=null){
+  selectCompanion(companionId);
   const installed=getExtensionVersion();
   if(installed!==installedVersion)installPanelExtension();
   let result=await requestPanelOpen(demo);
@@ -147,6 +152,18 @@ async function main(){
   }
   if(cmd==='--ansi'){
     await new GeekifyTui({demo:false}).run();return;
+  }
+  if(cmd==='companion'&&args[1]==='link'&&args[2]){
+    const id=installLink(resolve(args[2]));
+    console.log('Companion registered: '+id+'. Launch with geekify --'+id);
+    return;
+  }
+  if(cmd==='companion'&&args[1]==='list'){
+    for(const [id,file] of Object.entries(readRegistry()))console.log(id+' -> '+file);
+    return;
+  }
+  if(typeof cmd==='string'&&/^--[a-z][a-z0-9-]{1,39}$/.test(cmd)){
+    await launchPanel(false,cmd.slice(2));return;
   }
   if(cmd==='demo'){await launchPanel(true);return;}
   if(cmd===undefined){await launchPanel();return;}

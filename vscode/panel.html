@@ -3,16 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src __CSP_SOURCE__ https://i.scdn.co https://mosaic.scdn.co https://*.spotifycdn.com data:; style-src __CSP_SOURCE__ https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src __CSP_SOURCE__ https://sdk.scdn.co; connect-src https://*.spotify.com https://*.scdn.co wss://*.spotify.com; media-src blob: https://*.spotify.com https://*.scdn.co; frame-src https://*.spotify.com; worker-src blob:;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src __CSP_SOURCE__ https://i.scdn.co https://mosaic.scdn.co https://*.spotifycdn.com data:; style-src __CSP_SOURCE__ https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src __CSP_SOURCE__ https://sdk.scdn.co; connect-src __CSP_SOURCE__ https://*.spotify.com https://*.scdn.co wss://*.spotify.com; media-src blob: https://*.spotify.com https://*.scdn.co; frame-src https://*.spotify.com; worker-src blob:;">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
 <link rel="stylesheet" href="__CSS_URI__">
 <title>geekify.</title>
+__COMPANION_CSS__
 </head>
 <body>
-<div id="viewport"><div id="board" role="application" aria-label="Geekify music player"></div></div>
+<div id="viewport"><div id="board" role="application" aria-label="Geekify music player"></div><div id="companion-root"></div></div>
 <div id="toolbar"><span id="audioStatus">Connecting to Spotify…</span><button id="listenHere" type="button" disabled>Preparing in-panel player…</button><button id="openWeb" type="button">Spotify web player ↗</button></div>
 <script id="assets" type="application/json">__ASSETS_JSON__</script>
+<script id="companion-config" type="application/json">__COMPANION_CONFIG__</script>
 <script src="__JS_URI__" defer></script>
+__COMPANION_SCRIPT__
 <script src="https://sdk.scdn.co/spotify-player.js" defer></script>
 </body>
 </html>

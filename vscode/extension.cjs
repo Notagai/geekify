@@ -6,6 +6,7 @@ const {join}=require('node:path');
 const {homedir}=require('node:os');
 const {randomBytes}=require('node:crypto');
 const {startPanelBridge}=require('./bridge.cjs');
+const {resolveSelectedCompanion,pathToFileURL}=require('./companion-loader.cjs');
 
 const DEMO={id:'geekify-demo',title:'Midnight Frequency',artist:'geekify sessions',
   durationMs:136000,album:'unreleased transmissions',uri:null};
@@ -26,7 +27,7 @@ function writeStatus(phase,detail=''){
     const dir=join(homedir(),'.geekify');
     mkdirSync(dir,{recursive:true,mode:0o700});
     writeFileSync(join(dir,'extension-status.json'),JSON.stringify({
-      version:'0.4.8',phase,detail:detail.slice(0,180),updatedAt:Date.now()
+      version:'0.4.9',phase,detail:detail.slice(0,180),updatedAt:Date.now()
     }),{encoding:'utf8',mode:0o600});
   }catch{}
 }
@@ -46,19 +47,33 @@ function assetUrls(webview,extensionUri){
   }
   return result;
 }
-function getHtml(webview,extensionUri){
+function getHtml(webview,extensionUri,companion){
   const nonce=randomBytes(18).toString('hex');
   const assets=JSON.stringify(assetUrls(webview,extensionUri)).replace(/</g,'\\u003c');
   const css=webview.asWebviewUri(vscode.Uri.joinPath(extensionUri,'vscode','panel.css'));
   const js=webview.asWebviewUri(vscode.Uri.joinPath(extensionUri,'vscode','panel.js'));
+  const config=companion?{
+    id:companion.id,assets:Object.fromEntries(Object.entries(companion.assets)
+      .map(([key,file])=>[key,webview.asWebviewUri(vscode.Uri.file(file)).toString()]))
+  }:null;
+  const sheet=companion?webview.asWebviewUri(vscode.Uri.file(companion.style)).toString():null;
+  const script=companion?webview.asWebviewUri(vscode.Uri.file(companion.client)).toString():null;
+  const extras=script?'<script src="'+script+'" defer></script>':'';
   return readFileSync(join(extensionUri.fsPath,'vscode','panel.html'),'utf8')
     .replaceAll('__CSP_SOURCE__',webview.cspSource)
     .replaceAll('__NONCE__',nonce)
     .replaceAll('__CSS_URI__',css.toString())
     .replaceAll('__JS_URI__',js.toString())
-    .replace('__ASSETS_JSON__',assets);
+    .replace('__ASSETS_JSON__',assets)
+    .replace('__COMPANION_CONFIG__',JSON.stringify(config).replace(/</g,'\\u003c'))
+    .replace('__COMPANION_CSS__',sheet?'<link rel="stylesheet" href="'+sheet+'">':'')
+    .replace('__COMPANION_SCRIPT__',extras);
 }
 async function openPanel(context,forceDemo=false){
+  const companion=resolveSelectedCompanion();
+  if(activePanel&&activePanel.companionId!==(companion?.id||null)){
+    activePanel.panel.dispose();activePanel=null;
+  }
   if(activePanel){
     activePanel.panel.reveal(vscode.ViewColumn.One);
     if(forceDemo)activePanel.enableDemo();
@@ -72,10 +87,21 @@ async function openPanel(context,forceDemo=false){
     vscode.ViewColumn.One,{
       enableScripts:true,retainContextWhenHidden:true,
       localResourceRoots:[vscode.Uri.joinPath(context.extensionUri,'assets','geekify','ui'),
-        vscode.Uri.joinPath(context.extensionUri,'vscode')]
+        vscode.Uri.joinPath(context.extensionUri,'vscode'),
+        ...(companion?[vscode.Uri.file(require('node:path').dirname(companion.root)),
+          ...Object.values(companion.assets).map(f=>vscode.Uri.file(require('node:path').dirname(f)))]:[])]
     });
   const api=new spotify.SpotifyApi();
   let closed=false,pollTimer,lyricAbort,polling=false,trackKey='',pollAgain=false;
+  let companionRuntime=null;
+  if(companion){
+    const entry=await import(pathToFileURL(companion.entry).href);
+    if(typeof entry.createCompanion!=='function')throw Error('Companion must export createCompanion');
+    companionRuntime=await entry.createCompanion({
+      storageDir:join(homedir(),'.geekify','companion-data',companion.id)
+    });
+    if(!companionRuntime||typeof companionRuntime.handle!=='function')throw Error('Companion host invalid');
+  }
   let demo=forceDemo||!auth.isConnected();
   let track=demo?DEMO:null,playing=demo,progressMs=demo?75000:0;
   let lyrics=demo?DEMO_LYRICS:[],lyricsStatus=demo?'synced':'missing';
@@ -104,13 +130,13 @@ async function openPanel(context,forceDemo=false){
       deviceName,deviceRestricted,deviceId:playback?.device?.id||'',
       canStream:!demo&&scopes.includes('streaming')});
   }
-  const state={panel,enableDemo(){
+  const state={panel,companionId:companion?.id||null,enableDemo(){
     demo=true;track=DEMO;playing=true;progressMs=75000;
     lyrics=DEMO_LYRICS;lyricsStatus='synced';notice='Demo mode; no Spotify audio.';
     emit();
   }};
   try{
-    panel.webview.html=getHtml(panel.webview,context.extensionUri);
+    panel.webview.html=getHtml(panel.webview,context.extensionUri,companion);
   }catch(error){
     panel.dispose();
     throw error;
@@ -463,6 +489,16 @@ async function openPanel(context,forceDemo=false){
       catch(error){send({type:'token',requestId:message.requestId,error:safeError(error)});}
       return;
     }
+    if(message.type==='companion'&&companionRuntime&&message.id===companion.id){
+      if(!Number.isInteger(message.requestId)||message.requestId<1||message.requestId>1e8)return;
+      try{
+        const data=await companionRuntime.handle(message.method,message.payload||{});
+        send({type:'companion-response',id:companion.id,requestId:message.requestId,result:data});
+      }catch(error){
+        send({type:'companion-response',id:companion.id,requestId:message.requestId,error:safeError(error)});
+      }
+      return;
+    }
     if(message.type==='action'){
       try{await act(message);}
       catch(error){
@@ -473,7 +509,9 @@ async function openPanel(context,forceDemo=false){
     }
   });
   panel.onDidDispose(()=>{
-    closed=true;clearTimeout(pollTimer);lyricAbort?.abort();activePanel=null;
+    closed=true;clearTimeout(pollTimer);lyricAbort?.abort();
+    try{companionRuntime?.dispose?.();}catch{}
+    activePanel=null;
   });
 }
 async function activate(context,{startBridge=startPanelBridge,status=writeStatus}={}){

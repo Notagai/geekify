@@ -7,6 +7,33 @@ const board=document.getElementById('board');
 const status=document.getElementById('audioStatus');
 const listen=document.getElementById('listenHere');
 const NS='http://www.w3.org/2000/svg';
+
+const companionConfig=JSON.parse(document.getElementById('companion-config')?.textContent||'null');
+const companionRoot=document.getElementById('companion-root');
+let companionStateHandler=null;
+let companionLastState=null;
+let companionSeq=0;
+const companionPending=new Map();
+// Panel Companion v1: neutral bridge; plugin implementations stay outside this app.
+window.PanelCompanionHost={
+  register({id,mount}){
+    if(!companionConfig||id!==companionConfig.id||typeof mount!=='function')return;
+    mount(companionRoot,{
+      assets:companionConfig.assets,
+      request(method,payload={}){
+        if(typeof method!=='string'||method.length>64)return Promise.reject(Error('Invalid companion action'));
+        return new Promise((resolve,reject)=>{
+          const requestId=++companionSeq;
+          const timeout=setTimeout(()=>{companionPending.delete(requestId);reject(Error('Companion request timed out'));},40000);
+          companionPending.set(requestId,{resolve,reject,timeout});
+          vscode.postMessage({type:'companion',id,requestId,method,payload});
+        });
+      },
+      onPlayback(fn){companionStateHandler=typeof fn==='function'?fn:null;if(companionStateHandler&&companionLastState)companionStateHandler(companionLastState);}
+    });
+  }
+};
+
 // Lucide's 24px outline icon geometry, rendered locally as inline SVG.
 // No remote icon font, runtime CDN dependency, or clipped sprite sheets.
 const lucidePaths={
@@ -679,7 +706,15 @@ function initSdk(){
 window.onSpotifyWebPlaybackSDKReady=initSdk;
 window.addEventListener('message',event=>{
   const message=event.data;if(!message||typeof message.type!=='string')return;
-  if(message.type==='token'){
+  if(message.type==='companion-response'&&companionConfig&&message.id===companionConfig.id){
+    const pending=companionPending.get(message.requestId);
+    if(pending){clearTimeout(pending.timeout);companionPending.delete(message.requestId);
+      if(message.error)pending.reject(Error(message.error));
+      else pending.resolve(message.result);
+    }
+    return;
+  }
+    if(message.type==='token'){
     const callback=tokens.get(message.requestId);
     if(callback){
       tokens.delete(message.requestId);
@@ -695,6 +730,8 @@ window.addEventListener('message',event=>{
     else if(message.demo)status.textContent='Demo mode: connect Spotify to hear your music.';
     else if(!sdkDevice)status.textContent='Spotify connected. Trying in-panel playback…';
     redraw();
+    companionLastState={playing:!!message.playing,track:message.track?{id:message.track.id||null,title:message.track.title||'',artist:message.track.artist||''}:null,demo:!!message.demo};
+    try{companionStateHandler?.(companionLastState);}catch{}
     if(!message.demo&&window.Spotify&&!sdkPlayer)initSdk();
   }
 });

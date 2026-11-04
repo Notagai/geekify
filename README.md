@@ -173,3 +173,18 @@ The Spotify Web Playback SDK cannot be used in commercial applications without S
 - npm test, npm run cli:smoke and npm run build check the project. Extension packaging additionally depends on the VSIX packager.
 - The previous terminal graphics implementation remains in cli/graphics-app.mjs as legacy code but is no longer the default.
 - Lyrics from LRCLIB may be unavailable or unsynchronized.
+
+
+## Generic panel companions (v1)
+
+Companions are external, locally registered packages. The main repository does not contain any character code, sprite assets, dialogue, or AI credentials.
+
+Link a private companion's manifest from its own checkout:
+
+    geekify companion link C:\path\to\private-package\companion\manifest.json
+    geekify companion list
+    geekify --<companion-id>
+
+The generic flag selects the registered companion by manifest ID. Open the panel normally without a companion using geekify. Packages use the panel-companion/v1 protocol (client, style, entry, and assets manifest fields). The VS Code webview loads the companion's own UI and forwards native actions to its host module through a neutral request/response bridge.
+
+Registration stores a path to the original private checkout under ~/.geekify/companions.json. No source code needs to be copied into this repository. External companion packages execute native code with your user permissions, so only register packages you trust.

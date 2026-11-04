@@ -584,3 +584,6 @@ body{font-size:20px;}
 /* Lucide outline icons: consistent stroke and crisp scaling across the UI. */
 .pixel-icon{fill:none!important;stroke:currentColor!important;stroke-width:2!important;stroke-linecap:round;stroke-linejoin:round;shape-rendering:geometricPrecision;image-rendering:auto}
 .transport .pixel-icon{stroke-width:2.2!important}
+
+/* Neutral surface for any registered panel-companion/v1 extension. */
+#companion-root{position:absolute;inset:0;z-index:65;pointer-events:none;overflow:visible}
