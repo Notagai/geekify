@@ -24,7 +24,7 @@ window.PanelCompanionHost={
         if(typeof method!=='string'||method.length>64)return Promise.reject(Error('Invalid companion action'));
         return new Promise((resolve,reject)=>{
           const requestId=++companionSeq;
-          const timeout=setTimeout(()=>{companionPending.delete(requestId);reject(Error('Companion request timed out'));},40000);
+          const timeout=setTimeout(()=>{companionPending.delete(requestId);reject(Error('Companion request timed out'));},60000);
           companionPending.set(requestId,{resolve,reject,timeout});
           vscode.postMessage({type:'companion',id,requestId,method,payload});
         });
