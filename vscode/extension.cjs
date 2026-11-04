@@ -95,12 +95,14 @@ async function openPanel(context,forceDemo=false){
   let closed=false,pollTimer,lyricAbort,polling=false,trackKey='',pollAgain=false;
   let companionRuntime=null;
   if(companion){
-    const entry=await import(pathToFileURL(companion.entry).href);
-    if(typeof entry.createCompanion!=='function')throw Error('Companion must export createCompanion');
-    companionRuntime=await entry.createCompanion({
-      storageDir:join(homedir(),'.geekify','companion-data',companion.id)
-    });
-    if(!companionRuntime||typeof companionRuntime.handle!=='function')throw Error('Companion host invalid');
+    try{
+      const entry=await import(pathToFileURL(companion.entry).href);
+      if(typeof entry.createCompanion!=='function')throw Error('Companion must export createCompanion');
+      companionRuntime=await entry.createCompanion({
+        storageDir:join(homedir(),'.geekify','companion-data',companion.id)
+      });
+      if(!companionRuntime||typeof companionRuntime.handle!=='function')throw Error('Companion host invalid');
+    }catch(error){panel.dispose();throw error;}
   }
   let demo=forceDemo||!auth.isConnected();
   let track=demo?DEMO:null,playing=demo,progressMs=demo?75000:0;
