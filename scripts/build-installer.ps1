@@ -27,6 +27,7 @@ try {
 
   # A public installer must never contain private character assets or source.
   Add-Type -AssemblyName System.IO.Compression
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
   $zip = [System.IO.Compression.ZipFile]::OpenRead($vsix)
   try {
     $entries = @($zip.Entries | ForEach-Object { $_.FullName })
