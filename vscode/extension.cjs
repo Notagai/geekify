@@ -17,6 +17,12 @@ const DEMO_LYRICS=[
   {timeMs:88000,text:"we'll be quieter"},
   {timeMs:112000,text:'the city keeps glowing'}
 ];
+function bundledSpotifyClientId(extensionUri){
+  try{
+    const config=JSON.parse(readFileSync(join(extensionUri.fsPath,'vscode','spotify-client.json'),'utf8'));
+    return /^[a-f0-9]{32}$/i.test(config.clientId||'')?config.clientId:'';
+  }catch{return '';}
+}
 const allowedActions=new Set(['toggle','next','previous','seek','save','shuffle','repeat',
   'playItem','playPlaylist','openResult','togglePin','openPlaylistInSpotify','lyricsSize','planTrack','movePlanned','removePlanned','submitPlan','management','transfer','search','daily','recent','library','libraryFolder','libraryBack','playlist','retryPlaylist','devices','queue','openWeb','refresh']);
 const safeError=e=>String(e?.message||e).replace(/[\x00-\x1f\x7f-\x9f]/g,' ').slice(0,175);
@@ -27,7 +33,7 @@ function writeStatus(phase,detail=''){
     const dir=join(homedir(),'.geekify');
     mkdirSync(dir,{recursive:true,mode:0o700});
     writeFileSync(join(dir,'extension-status.json'),JSON.stringify({
-      version:'0.4.9',phase,detail:detail.slice(0,180),updatedAt:Date.now()
+      version:'0.5.0',phase,detail:detail.slice(0,180),updatedAt:Date.now()
     }),{encoding:'utf8',mode:0o600});
   }catch{}
 }
@@ -104,6 +110,8 @@ async function openPanel(context,forceDemo=false){
       if(!companionRuntime||typeof companionRuntime.handle!=='function')throw Error('Companion host invalid');
     }catch(error){panel.dispose();throw error;}
   }
+  const bundledClientId=bundledSpotifyClientId(context.extensionUri);
+  let connectingSpotify=false;
   let demo=forceDemo||!auth.isConnected();
   let track=demo?DEMO:null,playing=demo,progressMs=demo?75000:0;
   let lyrics=demo?DEMO_LYRICS:[],lyricsStatus=demo?'synced':'missing';
@@ -125,7 +133,7 @@ async function openPanel(context,forceDemo=false){
   function send(message){if(!closed)void panel.webview.postMessage(message);}
   function emit(){
     const scopes=String(auth.loadConfig().token?.scope||'').split(/\s+/);
-    send({type:'state',demo,track,playing,progressMs,lyrics,lyricsStatus,
+    send({type:'state',demo,connected:auth.isConnected(),showConnect:!auth.isConnected()&&!forceDemo,hasClientId:Boolean(bundledClientId||auth.loadConfig().clientId),track,playing,progressMs,lyrics,lyricsStatus,
       queue,planned,items,browseType,browseError,browseLoading,playlistRowsReceived,lyricSize:localSettings.lyricSize,pinned:localSettings.pinned,
       playlistName:playlist?.name||'',
       playlistImageUrl:playlist?.imageUrl||'',notice,repeat,shuffle,
@@ -485,6 +493,28 @@ async function openPanel(context,forceDemo=false){
     if(!message||typeof message.type!=='string'||closed)return;
     if(message.type==='ready'){
       emit();if(!demo)void poll();return;
+    }
+    if(message.type==='connect-spotify'){
+      if(connectingSpotify)return;
+      const id=bundledClientId||auth.loadConfig().clientId||String(message.clientId||'').trim();
+      if(!/^[a-f0-9]{32}$/i.test(id)){
+        send({type:'connect-result',error:'Enter a valid Spotify application Client ID (32 hexadecimal characters).'});
+        return;
+      }
+      connectingSpotify=true;
+      send({type:'connect-result',working:true});
+      try{
+        await auth.login(id);
+        if(closed)return;
+        demo=false;track=null;playing=false;progressMs=0;lyrics=[];lyricsStatus='missing';
+        notice='Spotify authorized. Checking playback…';
+        send({type:'connect-result',connected:true});
+        emit();void poll();
+      }catch(error){
+        notice='Spotify connection failed: '+safeError(error);
+        send({type:'connect-result',error:notice});emit();
+      }finally{connectingSpotify=false;}
+      return;
     }
     if(message.type==='token'&&typeof message.requestId==='number'&&!demo){
       try{const token=await auth.accessToken();send({type:'token',requestId:message.requestId,token});}

@@ -11,6 +11,19 @@ __COMPANION_CSS__
 </head>
 <body>
 <div id="viewport"><div id="board" role="application" aria-label="Geekify music player"></div><div id="companion-root"></div></div>
+<section id="spotify-connect" role="dialog" aria-labelledby="spotify-connect-title" aria-modal="true" hidden>
+ <div class="spotify-connect-card">
+  <h1 id="spotify-connect-title">connect spotify</h1>
+  <p>link your spotify account to use geekify in vs code.</p>
+  <form id="spotify-connect-form">
+   <label id="spotify-client-label" for="spotify-client-id">spotify app client id</label>
+   <input id="spotify-client-id" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="32" pattern="[A-Fa-f0-9]{32}" placeholder="32-character client id">
+   <button id="spotify-connect-button" type="submit">connect spotify</button>
+  </form>
+  <p id="spotify-connect-status" role="status" aria-live="polite"></p>
+  <p class="spotify-connect-help">spotify may require premium and developer-app allowlisting. no password is collected by geekify: sign-in opens in your browser.</p>
+ </div>
+</section>
 <div id="toolbar"><span id="audioStatus">Connecting to Spotify…</span><button id="listenHere" type="button" disabled>Preparing in-panel player…</button><button id="openWeb" type="button">Spotify web player ↗</button></div>
 <script id="assets" type="application/json">__ASSETS_JSON__</script>
 <script id="companion-config" type="application/json">__COMPANION_CONFIG__</script>

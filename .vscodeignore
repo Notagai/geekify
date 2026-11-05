@@ -12,3 +12,7 @@ src/scene.js
 src/spotify.js
 styles.css
 index.html
+
+installer/**
+release/**
+*.iss

@@ -6,6 +6,19 @@ const assets=JSON.parse(document.getElementById('assets').textContent);
 const board=document.getElementById('board');
 const status=document.getElementById('audioStatus');
 const listen=document.getElementById('listenHere');
+const connectGate=document.getElementById('spotify-connect');
+const connectForm=document.getElementById('spotify-connect-form');
+const connectButton=document.getElementById('spotify-connect-button');
+const connectInput=document.getElementById('spotify-client-id');
+const connectLabel=document.getElementById('spotify-client-label');
+const connectStatus=document.getElementById('spotify-connect-status');
+connectForm.addEventListener('submit',event=>{
+  event.preventDefault();
+  if(connectButton.disabled)return;
+  connectButton.disabled=true;
+  connectStatus.textContent='opening spotify in your browser…';
+  vscode.postMessage({type:'connect-spotify',clientId:connectInput.value.trim()});
+});
 const NS='http://www.w3.org/2000/svg';
 
 const companionConfig=JSON.parse(document.getElementById('companion-config')?.textContent||'null');
@@ -723,9 +736,21 @@ window.addEventListener('message',event=>{
     }
     return;
   }
+  if(message.type==='connect-result'){
+    if(message.working){connectStatus.textContent='authorize geekify in your browser…';return;}
+    connectButton.disabled=false;
+    if(message.error)connectStatus.textContent=message.error;
+    else if(message.connected)connectStatus.textContent='spotify connected';
+    return;
+  }
   if(message.type==='state'){
     const priorDemo=state.demo;
     state=message;updatedAt=performance.now();
+    connectGate.hidden=!message.showConnect;
+    connectInput.hidden=Boolean(message.hasClientId);
+    connectLabel.hidden=Boolean(message.hasClientId);
+    connectInput.required=!message.hasClientId;
+    if(!message.showConnect)connectButton.disabled=false;
     if(message.notice)status.textContent=message.notice;
     else if(message.demo)status.textContent='Demo mode: connect Spotify to hear your music.';
     else if(!sdkDevice)status.textContent='Spotify connected. Trying in-panel playback…';

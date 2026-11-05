@@ -1,6 +1,6 @@
 {
   "name": "geekify",
-  "version": "0.4.9",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "description": "Geekify VS Code pixel-art panel and fast Spotify terminal player.",
@@ -16,7 +16,8 @@
     "test": "node --test",
     "tui:demo": "node bin/geekify-fast.mjs demo",
     "extension:package": "npx --yes @vscode/vsce@3.6.0 package --allow-missing-repository --no-dependencies",
-    "extension:install": "npm run extension:package && node scripts/install-extension.mjs"
+    "extension:install": "npm run extension:package && node scripts/install-extension.mjs",
+    "installer:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-installer.ps1"
   },
   "engines": {
     "node": ">=20",

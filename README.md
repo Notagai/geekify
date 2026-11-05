@@ -1,5 +1,57 @@
 # geekify.
 
+## Windows installer (v0.5.0)
+
+**For people installing Geekify:** Download `GeekifySetup-0.5.0.exe` from a release
+once a release asset has been built. Install Visual Studio Code first, run the
+installer, then open VS Code. Use **Ctrl+Shift+P > Geekify: Open Player** (or the
+Geekify Start Menu shortcut). In the panel, click **Connect Spotify** and
+authorize it in the browser. If VS Code was already running, execute
+**Developer: Reload Window** first.
+
+The installer installs Geekify as a **VS Code extension**, not a standalone
+music player. End users do not need Git, npm, or Node.js. On a clean
+installation **no companion is configured and Reina is not included**.
+The Windows installer embeds only the public Geekify VSIX and contains an
+explicit audit against private companion files. Existing advanced users can
+continue to register their own external companions through the developer CLI.
+
+**Spotify access limitation:** Development Mode Spotify applications allow
+only five allowlisted users and require the app owner to have Premium.
+Spotify Web Playback SDK use in commercial products requires prior written
+approval. A working installer is not the same thing as approval for unlimited
+public Spotify users. The embedded Client ID is public, never a client secret,
+and PKCE is used for authorization. Audio inside the VS Code webview still
+depends on browser DRM support; users can instead play on Spotify Web Player
+or another Spotify Connect device.
+
+**For maintainers building a release (Windows):**
+
+1. Install Node.js 20+, npm, Inno Setup 6 and Visual Studio Code.
+2. Register the OAuth redirect URI `http://127.0.0.1:8888/callback` in
+   your Spotify Developer Dashboard.
+3. In PowerShell from the Geekify repository, run:
+
+   ```powershell
+   npm install
+   $env:GEEKIFY_SPOTIFY_CLIENT_ID = 'YOUR_32_CHARACTER_PUBLIC_CLIENT_ID'
+   npm run installer:build
+   ```
+
+4. The build writes `release/GeekifySetup-0.5.0.exe` and the matching VSIX.
+   It temporarily embeds your public Client ID in the VSIX, restores the
+   checked-in empty configuration, and checks the package for private
+   character assets. You can also build using **Actions > Windows Installer
+   > Run workflow** after setting the GitHub repository variable
+   `GEEKIFY_SPOTIFY_CLIENT_ID`.
+
+Without a configured Client ID, Geekify still builds for development, but
+the Connect Spotify screen asks the user to paste their own developer Client ID.
+**Do not ship that configuration as a one-click public release.**
+Test the installed EXE on a clean Windows user profile with VS Code already
+installed, authorize an allowlisted Premium Spotify account, then publish
+the tested EXE as a GitHub Release asset.
+
 A Spotify controller with two interfaces: a **pixel-art visual panel in VS Code** and a **fast terminal-native UI**. No more streaming enormous PNG frames through the terminal.
 
 ## Quick start (Windows / VS Code)

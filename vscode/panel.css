@@ -587,3 +587,19 @@ body{font-size:20px;}
 
 /* Neutral surface for any registered panel-companion/v1 extension. */
 #companion-root{position:absolute;inset:0;z-index:65;pointer-events:none;overflow:visible}
+
+/* First-run Spotify authorization, kept outside the generic companion protocol. */
+#spotify-connect{position:fixed;inset:0;z-index:9998;display:grid;place-items:center;
+  padding:20px;background:rgba(25,14,9,.90);color:#4a2918;}
+.spotify-connect-card{width:min(440px,100%);padding:26px;display:flex;flex-direction:column;gap:14px;
+  border:5px solid #91532b;box-shadow:8px 8px 0 #24120b;background:#f3d5a8;
+  font-family:Consolas,"Lucida Console",monospace;}
+.spotify-connect-card h1{font-size:26px;line-height:1.1;margin:0;color:#4a2918;text-transform:lowercase}
+.spotify-connect-card p{margin:0;line-height:1.5;font-size:13px}
+#spotify-connect-form{display:flex;flex-direction:column;gap:10px}
+#spotify-connect-form label{font-size:12px;font-weight:700}
+#spotify-client-id{width:100%;padding:12px;background:#fff0d2;border:2px solid #996845;color:#452414}
+#spotify-connect-button{padding:12px 18px;border:2px solid #4d2c19;background:#734321;color:#fff1d8;font-weight:bold}
+#spotify-connect-button:disabled{opacity:.6;cursor:wait}
+#spotify-connect-status{min-height:20px;color:#734321;overflow-wrap:anywhere}
+.spotify-connect-help{font-size:11px!important;opacity:.8}
