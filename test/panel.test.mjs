@@ -117,7 +117,8 @@ test('device status, search shortcuts and expandable art implemented',()=>{
  assert.ok(ext.includes("type==='recent'"));
  assert.ok(ext.includes("type==='daily'"));
  assert.ok(ui.includes("send('search',{query:lastSearch"));
- assert.ok(ui.includes("send('recent')"));
+ // Recent results are rendered through the shared search-results view.
+ assert.ok(ui.includes("['search','daily','recent'].includes(state.browseType)"));
  assert.ok(ui.includes("Expand playing song cover"));
  assert.ok(css.includes('.album-art-frame.expanded{transform:scale(2)'));
 });
